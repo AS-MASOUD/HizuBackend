@@ -40,8 +40,9 @@ public class SpecialOrdersController : ApiControllerBase
     }
 
     [HttpPost("upload")]
+    [Consumes("multipart/form-data")]
     [RequestSizeLimit(50 * 1024 * 1024)] // 50 MB for CAD files / 3D models
-    public async Task<ActionResult<SpecialOrderUploadItem>> UploadFile([FromForm] IFormFile file)
+    public async Task<ActionResult<SpecialOrderUploadItem>> UploadFile(IFormFile file)
     {
         if (file == null || file.Length == 0)
             return BadRequest("فایلی ارسال نشده است.");
