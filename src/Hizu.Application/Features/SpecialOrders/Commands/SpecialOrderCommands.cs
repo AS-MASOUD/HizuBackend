@@ -44,10 +44,17 @@ public class CreateSpecialOrderCommandValidator : AbstractValidator<CreateSpecia
 public class CreateSpecialOrderCommandHandler : IRequestHandler<CreateSpecialOrderCommand, SpecialOrderDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ISmsService _smsService;
+    private readonly IEmailService _emailService;
 
-    public CreateSpecialOrderCommandHandler(IApplicationDbContext context)
+    public CreateSpecialOrderCommandHandler(
+        IApplicationDbContext context,
+        ISmsService smsService,
+        IEmailService emailService)
     {
         _context = context;
+        _smsService = smsService;
+        _emailService = emailService;
     }
 
     public async Task<SpecialOrderDto> Handle(CreateSpecialOrderCommand request, CancellationToken cancellationToken)
@@ -84,6 +91,33 @@ public class CreateSpecialOrderCommandHandler : IRequestHandler<CreateSpecialOrd
         _context.SpecialOrders.Add(specialOrder);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // 1. Customer notification
+        if (!string.IsNullOrWhiteSpace(specialOrder.CustomerPhone))
+        {
+            await _smsService.SendOrderNotificationAsync(
+                specialOrder.CustomerPhone,
+                specialOrder.OrderNumber,
+                "درخواست ساخت اختصاصی شما با موفقیت ثبت شد و در دست بررسی کارشناسان قرار گرفت.",
+                cancellationToken);
+        }
+        if (!string.IsNullOrWhiteSpace(specialOrder.CustomerEmail))
+        {
+            await _emailService.SendOrderEmailAsync(
+                specialOrder.CustomerEmail,
+                specialOrder.OrderNumber,
+                $"درخواست ساخت قطعه اختصاصی با عنوان «{specialOrder.Title}» با موفقیت در هایزو ثبت گردید.",
+                cancellationToken);
+        }
+
+        // 2. Admin alert notification
+        var adminAlert = $"درخواست ساخت قطعه جدید #{specialOrder.OrderNumber} با عنوان «{specialOrder.Title}» از طرف {specialOrder.CustomerName} ثبت شد.";
+        await _smsService.SendAdminNotificationAsync(adminAlert, cancellationToken);
+        await _emailService.SendAdminOrderAlertEmailAsync(
+            specialOrder.OrderNumber,
+            specialOrder.EstimatedBudget ?? 0,
+            specialOrder.CustomerName,
+            cancellationToken);
+
         return new SpecialOrderDto
         {
             Id = specialOrder.Id,
@@ -115,10 +149,17 @@ public record ReplySpecialOrderCommand(Guid Id, string Reply, decimal? QuotedPri
 public class ReplySpecialOrderCommandHandler : IRequestHandler<ReplySpecialOrderCommand, bool>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ISmsService _smsService;
+    private readonly IEmailService _emailService;
 
-    public ReplySpecialOrderCommandHandler(IApplicationDbContext context)
+    public ReplySpecialOrderCommandHandler(
+        IApplicationDbContext context,
+        ISmsService smsService,
+        IEmailService emailService)
     {
         _context = context;
+        _smsService = smsService;
+        _emailService = emailService;
     }
 
     public async Task<bool> Handle(ReplySpecialOrderCommand request, CancellationToken cancellationToken)
@@ -143,6 +184,29 @@ public class ReplySpecialOrderCommandHandler : IRequestHandler<ReplySpecialOrder
         order.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Notify customer of admin response
+        var messageDetail = request.QuotedPrice.HasValue
+            ? $"برآورد هزینه: {request.QuotedPrice.Value:N0} تومان. پاسخ: {request.Reply}"
+            : $"پاسخ هایزو: {request.Reply}";
+
+        if (!string.IsNullOrWhiteSpace(order.CustomerPhone))
+        {
+            await _smsService.SendOrderNotificationAsync(
+                order.CustomerPhone,
+                order.OrderNumber,
+                $"به درخواست ساخت اختصاصی شما پاسخ داده شد: {messageDetail}",
+                cancellationToken);
+        }
+        if (!string.IsNullOrWhiteSpace(order.CustomerEmail))
+        {
+            await _emailService.SendOrderEmailAsync(
+                order.CustomerEmail,
+                order.OrderNumber,
+                $"پاسخ کارشناس هایزو به درخواست شما: <br/><strong>{messageDetail}</strong>",
+                cancellationToken);
+        }
+
         return true;
     }
 }
@@ -152,10 +216,14 @@ public record UpdateSpecialOrderStatusCommand(Guid Id, SpecialOrderStatus Status
 public class UpdateSpecialOrderStatusCommandHandler : IRequestHandler<UpdateSpecialOrderStatusCommand, bool>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ISmsService _smsService;
 
-    public UpdateSpecialOrderStatusCommandHandler(IApplicationDbContext context)
+    public UpdateSpecialOrderStatusCommandHandler(
+        IApplicationDbContext context,
+        ISmsService smsService)
     {
         _context = context;
+        _smsService = smsService;
     }
 
     public async Task<bool> Handle(UpdateSpecialOrderStatusCommand request, CancellationToken cancellationToken)
@@ -168,6 +236,16 @@ public class UpdateSpecialOrderStatusCommandHandler : IRequestHandler<UpdateSpec
         order.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(order.CustomerPhone))
+        {
+            await _smsService.SendOrderNotificationAsync(
+                order.CustomerPhone,
+                order.OrderNumber,
+                $"وضعیت درخواست شما به «{request.Status}» تغییر یافت.",
+                cancellationToken);
+        }
+
         return true;
     }
 }

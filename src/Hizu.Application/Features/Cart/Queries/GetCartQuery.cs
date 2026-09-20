@@ -21,6 +21,8 @@ public class GetCartQueryHandler : IRequestHandler<GetCartQuery, CartDto>
         var cart = await _context.Carts
             .Include(c => c.Items)
                 .ThenInclude(i => i.Product)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Course)
             .FirstOrDefaultAsync(c => c.UserId == request.UserId, cancellationToken);
 
         if (cart == null)
@@ -33,24 +35,51 @@ public class GetCartQueryHandler : IRequestHandler<GetCartQuery, CartDto>
             };
         }
 
+        var validItems = new List<CartItemDto>();
+
+        foreach (var item in cart.Items)
+        {
+            if (item.Product != null && item.Product.IsActive)
+            {
+                validItems.Add(new CartItemDto
+                {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    CourseId = null,
+                    ItemType = "Product",
+                    ProductName = item.Product.Name,
+                    ProductSlug = item.Product.Slug,
+                    Sku = item.Product.Sku,
+                    ImageUrl = item.Product.ImageUrl,
+                    UnitPrice = item.Product.Price,
+                    Quantity = item.Quantity,
+                    AvailableStock = item.Product.StockQuantity
+                });
+            }
+            else if (item.Course != null && item.Course.IsPublished)
+            {
+                validItems.Add(new CartItemDto
+                {
+                    Id = item.Id,
+                    ProductId = null,
+                    CourseId = item.CourseId,
+                    ItemType = "Course",
+                    ProductName = item.Course.Title,
+                    ProductSlug = item.Course.Slug,
+                    Sku = $"CRS-{item.Course.Slug.ToUpper()}",
+                    ImageUrl = item.Course.CoverImageUrl,
+                    UnitPrice = item.Course.Price,
+                    Quantity = 1,
+                    AvailableStock = 9999
+                });
+            }
+        }
+
         return new CartDto
         {
             Id = cart.Id,
             UserId = cart.UserId,
-            Items = cart.Items
-                .Where(i => i.Product != null && i.Product.IsActive)
-                .Select(i => new CartItemDto
-                {
-                    Id = i.Id,
-                    ProductId = i.ProductId,
-                    ProductName = i.Product.Name,
-                    ProductSlug = i.Product.Slug,
-                    Sku = i.Product.Sku,
-                    ImageUrl = i.Product.ImageUrl,
-                    UnitPrice = i.Product.Price, // Authoritative current price from Product record
-                    Quantity = i.Quantity,
-                    AvailableStock = i.Product.StockQuantity
-                }).ToList()
+            Items = validItems
         };
     }
 }

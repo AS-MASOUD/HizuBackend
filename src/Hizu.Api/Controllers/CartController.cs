@@ -21,7 +21,7 @@ public class CartController : ApiControllerBase
     public async Task<ActionResult<CartDto>> AddItem([FromBody] AddCartItemRequest request)
     {
         if (!CurrentUserId.HasValue) return Unauthorized();
-        var result = await Mediator.Send(new AddToCartCommand(CurrentUserId.Value, request.ProductId, request.Quantity));
+        var result = await Mediator.Send(new AddToCartCommand(CurrentUserId.Value, request.ProductId, request.Quantity, request.CourseId));
         return Ok(result);
     }
 
@@ -50,5 +50,5 @@ public class CartController : ApiControllerBase
     }
 }
 
-public record AddCartItemRequest(Guid ProductId, int Quantity);
+public record AddCartItemRequest(Guid? ProductId = null, int Quantity = 1, Guid? CourseId = null);
 public record UpdateCartItemRequest(int Quantity);

@@ -16,6 +16,12 @@ public interface IApplicationDbContext
     DbSet<OrderItem> OrderItems { get; }
     DbSet<SpecialOrder> SpecialOrders { get; }
     DbSet<SpecialOrderImage> SpecialOrderImages { get; }
+    DbSet<Article> Articles { get; }
+    DbSet<ProductComment> ProductComments { get; }
+    DbSet<Course> Courses { get; }
+    DbSet<CourseSection> CourseSections { get; }
+    DbSet<CourseEpisode> CourseEpisodes { get; }
+    DbSet<CourseEnrollment> CourseEnrollments { get; }
     DbSet<ApplicationUser> Users { get; }
 
     DatabaseFacade Database { get; }

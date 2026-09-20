@@ -1,3 +1,4 @@
+using Hizu.Application.Common.Interfaces;
 using Hizu.Application.Features.Auth.Commands;
 using Hizu.Application.Features.Auth.DTOs;
 using Hizu.Application.Features.Auth.Queries;
@@ -10,6 +11,20 @@ public class AuthController : ApiControllerBase
 {
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterCommand command)
+    {
+        var result = await Mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpPost("send-otp")]
+    public async Task<ActionResult<OtpSendResult>> SendOtp([FromBody] SendOtpCommand command)
+    {
+        var result = await Mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpPost("verify-otp-login")]
+    public async Task<ActionResult<AuthResponseDto>> VerifyOtpLogin([FromBody] VerifyOtpLoginCommand command)
     {
         var result = await Mediator.Send(command);
         return Ok(result);

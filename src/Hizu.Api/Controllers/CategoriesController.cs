@@ -16,7 +16,7 @@ public class CategoriesController : ApiControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.AdminOrSysManager)]
     [HttpPost]
     public async Task<ActionResult<CategoryDto>> CreateCategory([FromBody] CreateCategoryCommand command)
     {
@@ -24,7 +24,7 @@ public class CategoriesController : ApiControllerBase
         return CreatedAtAction(nameof(GetCategories), new { id = result.Id }, result);
     }
 
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.AdminOrSysManager)]
     [HttpPut("{id}")]
     public async Task<ActionResult<CategoryDto>> UpdateCategory(int id, [FromBody] UpdateCategoryCommand command)
     {
@@ -35,7 +35,7 @@ public class CategoriesController : ApiControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.AdminOrSysManager)]
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteCategory(int id)
     {

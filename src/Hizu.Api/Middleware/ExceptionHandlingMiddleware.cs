@@ -92,11 +92,11 @@ public class ExceptionHandlingMiddleware
     {
         return statusCode switch
         {
-            HttpStatusCode.BadRequest => "Bad Request",
-            HttpStatusCode.NotFound => "Not Found",
-            HttpStatusCode.Unauthorized => "Unauthorized",
-            HttpStatusCode.Forbidden => "Forbidden",
-            _ => "Internal Server Error"
+            HttpStatusCode.BadRequest => "درخواست نامعتبر",
+            HttpStatusCode.NotFound => "یافت نشد",
+            HttpStatusCode.Unauthorized => "عدم احراز هویت",
+            HttpStatusCode.Forbidden => "عدم دسترسی مجاز",
+            _ => "خطای داخلی سرور"
         };
     }
 }

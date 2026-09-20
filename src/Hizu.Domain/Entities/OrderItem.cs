@@ -7,8 +7,11 @@ public class OrderItem : BaseEntity
     public Guid OrderId { get; set; }
     public Order Order { get; set; } = null!;
 
-    public Guid ProductId { get; set; }
-    public Product Product { get; set; } = null!;
+    public Guid? ProductId { get; set; }
+    public Product? Product { get; set; }
+
+    public Guid? CourseId { get; set; }
+    public Course? Course { get; set; }
 
     public string ProductName { get; set; } = string.Empty;
     public string Sku { get; set; } = string.Empty;

@@ -14,4 +14,5 @@ public class ApplicationUser : IdentityUser<Guid>
     public Cart? Cart { get; set; }
     public ICollection<Order> Orders { get; set; } = new List<Order>();
     public ICollection<SpecialOrder> SpecialOrders { get; set; } = new List<SpecialOrder>();
+    public ICollection<CourseEnrollment> CourseEnrollments { get; set; } = new List<CourseEnrollment>();
 }

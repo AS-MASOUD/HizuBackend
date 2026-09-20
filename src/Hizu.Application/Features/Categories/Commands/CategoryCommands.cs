@@ -163,7 +163,7 @@ public class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryComman
             throw new NotFoundException("Category", request.Id);
 
         if (category.Products.Any())
-            throw new BadRequestException("Cannot delete category that contains products.");
+            throw new BadRequestException("امکان حذف دسته‌بندی دارای محصولات فعال وجود ندارد.");
 
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync(cancellationToken);

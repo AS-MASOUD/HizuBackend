@@ -25,6 +25,8 @@ public class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery, Order
             .Include(o => o.User)
             .Include(o => o.Items)
                 .ThenInclude(i => i.Product)
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Course)
             .Where(o => o.Id == request.OrderId);
 
         if (request.UserId.HasValue)
@@ -54,9 +56,10 @@ public class GetOrderByIdQueryHandler : IRequestHandler<GetOrderByIdQuery, Order
             {
                 Id = i.Id,
                 ProductId = i.ProductId,
+                CourseId = i.CourseId,
                 ProductName = i.ProductName,
                 Sku = i.Sku,
-                ImageUrl = i.Product?.ImageUrl,
+                ImageUrl = i.Product != null ? i.Product.ImageUrl : i.Course?.CoverImageUrl,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
                 TotalPrice = i.TotalPrice
@@ -150,9 +153,10 @@ public class GetAllOrdersQueryHandler : IRequestHandler<GetAllOrdersQuery, Paged
                 {
                     Id = i.Id,
                     ProductId = i.ProductId,
+                    CourseId = i.CourseId,
                     ProductName = i.ProductName,
                     Sku = i.Sku,
-                    ImageUrl = i.Product != null ? i.Product.ImageUrl : null,
+                    ImageUrl = i.Product != null ? i.Product.ImageUrl : i.Course != null ? i.Course.CoverImageUrl : null,
                     Quantity = i.Quantity,
                     UnitPrice = i.UnitPrice,
                     TotalPrice = i.TotalPrice

@@ -15,7 +15,7 @@ public record CreateProductCommand : IRequest<ProductDto>
     public string? Slug { get; init; }
     public string Description { get; init; } = string.Empty;
     public string? ShortDescription { get; init; }
-    public string Sku { get; init; } = string.Empty;
+    public string? Sku { get; init; }
     public decimal Price { get; init; }
     public decimal? CompareAtPrice { get; init; }
     public int StockQuantity { get; init; }
@@ -39,7 +39,7 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
     public CreateProductCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Sku).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.Sku).MaximumLength(50).When(x => !string.IsNullOrEmpty(x.Sku));
         RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
         RuleFor(x => x.StockQuantity).GreaterThanOrEqualTo(0);
         RuleFor(x => x.CategoryId).GreaterThan(0);
@@ -71,13 +71,33 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
             slug = $"{slug}-{DateTime.UtcNow.Ticks % 10000}";
         }
 
+        string sku;
+        if (!string.IsNullOrWhiteSpace(request.Sku))
+        {
+            sku = request.Sku.Trim().ToUpperInvariant();
+        }
+        else
+        {
+            // Automatic coding system: HZ-{CATEGORY_CODE}-{0001}
+            var catCode = !string.IsNullOrWhiteSpace(category.Code) ? category.Code.Trim().ToUpperInvariant() : "PRD";
+            var existingCategoryCount = await _context.Products.CountAsync(p => p.CategoryId == category.Id, cancellationToken);
+            var seq = existingCategoryCount + 1;
+            sku = $"HZ-{catCode}-{seq:D4}";
+
+            while (await _context.Products.AnyAsync(p => p.Sku == sku, cancellationToken))
+            {
+                seq++;
+                sku = $"HZ-{catCode}-{seq:D4}";
+            }
+        }
+
         var product = new Product
         {
             Name = request.Name,
             Slug = slug,
             Description = request.Description,
             ShortDescription = request.ShortDescription,
-            Sku = request.Sku.Trim().ToUpperInvariant(),
+            Sku = sku,
             Price = request.Price,
             CompareAtPrice = request.CompareAtPrice,
             StockQuantity = request.StockQuantity,
@@ -141,7 +161,7 @@ public record UpdateProductCommand : IRequest<ProductDto>
     public string? Slug { get; init; }
     public string Description { get; init; } = string.Empty;
     public string? ShortDescription { get; init; }
-    public string Sku { get; init; } = string.Empty;
+    public string? Sku { get; init; }
     public decimal Price { get; init; }
     public decimal? CompareAtPrice { get; init; }
     public int StockQuantity { get; init; }
@@ -190,7 +210,10 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         }
         product.Description = request.Description;
         product.ShortDescription = request.ShortDescription;
-        product.Sku = request.Sku.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(request.Sku))
+        {
+            product.Sku = request.Sku.Trim().ToUpperInvariant();
+        }
         product.Price = request.Price;
         product.CompareAtPrice = request.CompareAtPrice;
         product.StockQuantity = request.StockQuantity;
@@ -208,6 +231,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
 
         if (request.ImageUrls != null)
         {
+            _context.ProductImages.RemoveRange(product.Images);
             product.Images.Clear();
             int order = 1;
             foreach (var url in request.ImageUrls)
@@ -291,7 +315,7 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
 
         var newStock = product.StockQuantity + request.QuantityChange;
         if (newStock < 0)
-            throw new BadRequestException($"Insufficient stock for product '{product.Name}'. Available: {product.StockQuantity}");
+            throw new BadRequestException($"موجودی محصول «{product.Name}» برای این عملیات کافی نیست. موجودی انبار: {product.StockQuantity}");
 
         product.StockQuantity = newStock;
         product.UpdatedAt = DateTime.UtcNow;

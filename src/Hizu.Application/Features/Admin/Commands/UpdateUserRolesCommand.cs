@@ -1,4 +1,5 @@
 using Hizu.Application.Common.Exceptions;
+using Hizu.Domain.Constants;
 using Hizu.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -31,7 +32,19 @@ public class UpdateUserRolesCommandHandler : IRequestHandler<UpdateUserRolesComm
         if (!removeResult.Succeeded)
             throw new BadRequestException("خطا در حذف نقش‌های قبلی کاربر.");
 
-        foreach (var role in request.Roles)
+        var targetRoles = new HashSet<string>(request.Roles, StringComparer.OrdinalIgnoreCase);
+
+        // Always preserve customer role so user can browse and order
+        targetRoles.Add(AppRoles.Customer);
+
+        // Prevent stripping SysManager from the primary root admin
+        if (user.Email == "admin@hizu.ir" || user.UserName == "admin@hizu.ir")
+        {
+            targetRoles.Add(AppRoles.SysManager);
+            targetRoles.Add(AppRoles.Admin);
+        }
+
+        foreach (var role in targetRoles)
         {
             if (!await _roleManager.RoleExistsAsync(role))
             {
@@ -39,7 +52,7 @@ public class UpdateUserRolesCommandHandler : IRequestHandler<UpdateUserRolesComm
             }
         }
 
-        var addResult = await _userManager.AddToRolesAsync(user, request.Roles);
+        var addResult = await _userManager.AddToRolesAsync(user, targetRoles);
         if (!addResult.Succeeded)
             throw new BadRequestException("خطا در افزودن نقش‌های جدید به کاربر.");
 

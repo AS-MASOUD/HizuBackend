@@ -30,4 +30,5 @@ public class Product : BaseEntity
     public ICollection<ProductImage> Images { get; set; } = new List<ProductImage>();
     public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public ICollection<ProductComment> Comments { get; set; } = new List<ProductComment>();
 }

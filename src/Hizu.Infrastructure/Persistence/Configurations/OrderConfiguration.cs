@@ -69,6 +69,13 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.HasOne(oi => oi.Product)
             .WithMany(p => p.OrderItems)
             .HasForeignKey(oi => oi.ProductId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(oi => oi.Course)
+            .WithMany(c => c.OrderItems)
+            .HasForeignKey(oi => oi.CourseId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

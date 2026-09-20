@@ -5,7 +5,7 @@ public class ValidationException : Exception
     public IDictionary<string, string[]> Errors { get; }
 
     public ValidationException()
-        : base("One or more validation failures have occurred.")
+        : base("یک یا چند خطای اعتبارسنجی در اطلاعات ورودی رخ داده است.")
     {
         Errors = new Dictionary<string, string[]>();
     }

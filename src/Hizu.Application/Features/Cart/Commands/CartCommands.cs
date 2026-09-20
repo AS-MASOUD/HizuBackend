@@ -10,13 +10,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Hizu.Application.Features.Cart.Commands;
 
-public record AddToCartCommand(Guid UserId, Guid ProductId, int Quantity) : IRequest<CartDto>;
+public record AddToCartCommand(Guid UserId, Guid? ProductId = null, int Quantity = 1, Guid? CourseId = null) : IRequest<CartDto>;
 
 public class AddToCartCommandValidator : AbstractValidator<AddToCartCommand>
 {
     public AddToCartCommandValidator()
     {
-        RuleFor(x => x.ProductId).NotEmpty();
+        RuleFor(x => x)
+            .Must(x => x.ProductId.HasValue || x.CourseId.HasValue)
+            .WithMessage("شناسه محصول یا شناسه دوره آموزشی باید مشخص باشد.");
+
         RuleFor(x => x.Quantity).GreaterThan(0);
     }
 }
@@ -34,10 +37,6 @@ public class AddToCartCommandHandler : IRequestHandler<AddToCartCommand, CartDto
 
     public async Task<CartDto> Handle(AddToCartCommand request, CancellationToken cancellationToken)
     {
-        var product = await _context.Products.FindAsync([request.ProductId], cancellationToken);
-        if (product == null || !product.IsActive)
-            throw new NotFoundException("Product", request.ProductId);
-
         var cart = await _context.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.UserId == request.UserId, cancellationToken);
@@ -50,31 +49,66 @@ public class AddToCartCommandHandler : IRequestHandler<AddToCartCommand, CartDto
                 CreatedAt = DateTime.UtcNow
             };
             _context.Carts.Add(cart);
-            await _context.SaveChangesAsync(cancellationToken);
         }
 
-        var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId);
-        var totalRequested = (existingItem?.Quantity ?? 0) + request.Quantity;
-
-        if (totalRequested > product.StockQuantity)
-            throw new BadRequestException($"Cannot add {request.Quantity} items. Available stock: {product.StockQuantity}");
-
-        if (existingItem != null)
+        if (request.CourseId.HasValue)
         {
-            existingItem.Quantity = totalRequested;
-            existingItem.UnitPrice = product.Price;
-            existingItem.UpdatedAt = DateTime.UtcNow;
-        }
-        else
-        {
-            cart.Items.Add(new CartItem
+            var course = await _context.Courses.FindAsync([request.CourseId.Value], cancellationToken);
+            if (course == null || !course.IsPublished)
+                throw new NotFoundException("Course", request.CourseId.Value);
+
+            var existingItem = cart.Items.FirstOrDefault(i => i.CourseId == request.CourseId.Value);
+            if (existingItem == null)
             {
-                CartId = cart.Id,
-                ProductId = request.ProductId,
-                Quantity = request.Quantity,
-                UnitPrice = product.Price,
-                CreatedAt = DateTime.UtcNow
-            });
+                var cartItem = new CartItem
+                {
+                    Cart = cart,
+                    CartId = cart.Id,
+                    Course = course,
+                    CourseId = course.Id,
+                    ProductId = null,
+                    Quantity = 1,
+                    UnitPrice = course.Price,
+                    CreatedAt = DateTime.UtcNow
+                };
+                cart.Items.Add(cartItem);
+                _context.CartItems.Add(cartItem);
+            }
+        }
+        else if (request.ProductId.HasValue)
+        {
+            var product = await _context.Products.FindAsync([request.ProductId.Value], cancellationToken);
+            if (product == null || !product.IsActive)
+                throw new NotFoundException("Product", request.ProductId.Value);
+
+            var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId.Value);
+            var totalRequested = (existingItem?.Quantity ?? 0) + request.Quantity;
+
+            if (totalRequested > product.StockQuantity)
+                throw new BadRequestException($"امکان افزودن {request.Quantity} عدد وجود ندارد. موجودی انبار: {product.StockQuantity} عدد");
+
+            if (existingItem != null)
+            {
+                existingItem.Quantity = totalRequested;
+                existingItem.UnitPrice = product.Price;
+                existingItem.UpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                var cartItem = new CartItem
+                {
+                    Cart = cart,
+                    CartId = cart.Id,
+                    Product = product,
+                    ProductId = request.ProductId.Value,
+                    CourseId = null,
+                    Quantity = request.Quantity,
+                    UnitPrice = product.Price,
+                    CreatedAt = DateTime.UtcNow
+                };
+                cart.Items.Add(cartItem);
+                _context.CartItems.Add(cartItem);
+            }
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -114,10 +148,15 @@ public class UpdateCartItemCommandHandler : IRequestHandler<UpdateCartItemComman
         {
             _context.CartItems.Remove(item);
         }
+        else if (item.CourseId.HasValue)
+        {
+            item.Quantity = 1;
+            item.UpdatedAt = DateTime.UtcNow;
+        }
         else
         {
             if (item.Product != null && request.Quantity > item.Product.StockQuantity)
-                throw new BadRequestException($"Requested quantity ({request.Quantity}) exceeds available stock ({item.Product.StockQuantity}).");
+                throw new BadRequestException($"تعداد درخواستی ({request.Quantity}) بیشتر از موجودی انبار ({item.Product.StockQuantity}) است.");
 
             item.Quantity = request.Quantity;
             item.UpdatedAt = DateTime.UtcNow;

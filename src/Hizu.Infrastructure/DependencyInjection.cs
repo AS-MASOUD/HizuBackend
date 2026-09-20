@@ -38,7 +38,9 @@ public static class DependencyInjection
             options.Password.RequireUppercase = false;
             options.Password.RequireNonAlphanumeric = false;
             options.Password.RequiredLength = 6;
-            options.User.RequireUniqueEmail = true;
+            options.User.RequireUniqueEmail = false;
+            options.Lockout.AllowedForNewUsers = false;
+            options.Lockout.MaxFailedAccessAttempts = 100;
         })
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
@@ -71,10 +73,17 @@ public static class DependencyInjection
             };
         });
 
-        // 4. Services
+        // 4. Caching & HTTP Clients
+        services.AddMemoryCache();
+        services.AddHttpClient("SmsClient");
+
+        // 5. Application Services
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<ISmsService, SmsService>();
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IOtpService, OtpService>();
 
         return services;
     }

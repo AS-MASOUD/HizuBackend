@@ -25,6 +25,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hizu.Application\Hizu.Application.csproj" />
     <ProjectReference Include="..\..\src\Hizu.Domain\Hizu.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Hizu.Infrastructure\Hizu.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

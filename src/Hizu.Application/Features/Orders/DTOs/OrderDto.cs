@@ -32,7 +32,8 @@ public class OrderDto
 public class OrderItemDto
 {
     public Guid Id { get; set; }
-    public Guid ProductId { get; set; }
+    public Guid? ProductId { get; set; }
+    public Guid? CourseId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public string Sku { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }

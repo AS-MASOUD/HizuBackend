@@ -24,6 +24,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<SpecialOrder> SpecialOrders => Set<SpecialOrder>();
     public DbSet<SpecialOrderImage> SpecialOrderImages => Set<SpecialOrderImage>();
+    public DbSet<Article> Articles => Set<Article>();
+    public DbSet<ProductComment> ProductComments => Set<ProductComment>();
+    public DbSet<Course> Courses => Set<Course>();
+    public DbSet<CourseSection> CourseSections => Set<CourseSection>();
+    public DbSet<CourseEpisode> CourseEpisodes => Set<CourseEpisode>();
+    public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

@@ -7,7 +7,7 @@ public class NotFoundException : Exception
     }
 
     public NotFoundException(string name, object key)
-        : base($"Entity \"{name}\" ({key}) was not found.")
+        : base($"مورد درخواستی با شناسه ({key}) در بخش {name} یافت نشد.")
     {
     }
 }
