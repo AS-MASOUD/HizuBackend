@@ -10,7 +10,9 @@ public class OrderDto
     public Guid UserId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
+    public string CustomerPhone { get; set; } = string.Empty;
     public OrderStatus Status { get; set; }
+    public bool IsStockDeducted { get; set; }
     public string StatusText => Status switch
     {
         OrderStatus.Pending => "در انتظار پرداخت / تایید",

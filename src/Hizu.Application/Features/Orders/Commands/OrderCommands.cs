@@ -115,10 +115,6 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
                     if (product.StockQuantity < item.Quantity)
                         throw new BadRequestException($"موجودی محصول '{product.Name}' برای تعداد درخواستی کافی نیست. موجودی انبار: {product.StockQuantity}");
 
-                    // Atomic stock reduction
-                    product.StockQuantity -= item.Quantity;
-                    product.UpdatedAt = DateTime.UtcNow;
-
                     var itemTotal = product.Price * item.Quantity;
                     subtotal += itemTotal;
 
@@ -147,7 +143,8 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
             {
                 UserId = request.UserId,
                 OrderNumber = orderNumber,
-                Status = OrderStatus.Processing, // Direct to processing upon creation
+                Status = OrderStatus.Pending, // Starts in Pending; stock deducted when committed from admin
+                IsStockDeducted = false,
                 Subtotal = subtotal,
                 ShippingCost = shippingCost,
                 Total = total,
@@ -175,7 +172,9 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
                 UserId = order.UserId,
                 CustomerName = customerFullName,
                 CustomerEmail = user.Email ?? string.Empty,
+                CustomerPhone = user.PhoneNumber ?? string.Empty,
                 Status = order.Status,
+                IsStockDeducted = order.IsStockDeducted,
                 Subtotal = order.Subtotal,
                 ShippingCost = order.ShippingCost,
                 Total = order.Total,
@@ -202,7 +201,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
             {
                 if (!string.IsNullOrWhiteSpace(user.PhoneNumber))
                 {
-                    await _smsService.SendCustomerOrderStatusSmsAsync(user.PhoneNumber, customerFullName, order.OrderNumber, "در حال آماده‌سازی و ساخت", cancellationToken);
+                    await _smsService.SendCustomerOrderStatusSmsAsync(user.PhoneNumber, customerFullName, order.OrderNumber, "در انتظار بررسی و تایید", cancellationToken);
                 }
                 if (!string.IsNullOrWhiteSpace(user.Email))
                 {
@@ -210,8 +209,8 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
                         user.Email,
                         customerFullName,
                         order.OrderNumber,
-                        "در حال آماده‌سازی و ساخت",
-                        "سفارش شما با موفقیت ثبت و تایید گردید و در حال آماده‌سازی در کارگاه استودیو هیزو می‌باشد.",
+                        "در انتظار بررسی و تایید",
+                        "سفارش شما با موفقیت در سیستم استودیو هیزو ثبت گردید و در انتظار بررسی و تایید قرار دارد.",
                         orderDto,
                         cancellationToken);
                 }
@@ -280,6 +279,47 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
         if (order == null)
             throw new NotFoundException("Order", request.OrderId);
 
+        // Stock inventory management on admin commit / uncommit
+        bool isCommitStatus = request.NewStatus == OrderStatus.Processing ||
+                              request.NewStatus == OrderStatus.Shipped ||
+                              request.NewStatus == OrderStatus.Delivered;
+
+        bool isUncommitStatus = request.NewStatus == OrderStatus.Pending ||
+                                request.NewStatus == OrderStatus.Cancelled;
+
+        if (isCommitStatus && !order.IsStockDeducted)
+        {
+            foreach (var item in order.Items)
+            {
+                if (item.ProductId.HasValue)
+                {
+                    var product = await _context.Products.FindAsync([item.ProductId.Value], cancellationToken);
+                    if (product != null)
+                    {
+                        product.StockQuantity = Math.Max(0, product.StockQuantity - item.Quantity);
+                        product.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+            }
+            order.IsStockDeducted = true;
+        }
+        else if (isUncommitStatus && order.IsStockDeducted)
+        {
+            foreach (var item in order.Items)
+            {
+                if (item.ProductId.HasValue)
+                {
+                    var product = await _context.Products.FindAsync([item.ProductId.Value], cancellationToken);
+                    if (product != null)
+                    {
+                        product.StockQuantity += item.Quantity;
+                        product.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+            }
+            order.IsStockDeducted = false;
+        }
+
         order.Status = request.NewStatus;
         order.UpdatedAt = DateTime.UtcNow;
 
@@ -324,7 +364,9 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
                 UserId = order.UserId,
                 CustomerName = customerName,
                 CustomerEmail = user.Email ?? string.Empty,
+                CustomerPhone = user.PhoneNumber ?? string.Empty,
                 Status = order.Status,
+                IsStockDeducted = order.IsStockDeducted,
                 Subtotal = order.Subtotal,
                 ShippingCost = order.ShippingCost,
                 Total = order.Total,

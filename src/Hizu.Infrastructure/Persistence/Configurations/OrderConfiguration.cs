@@ -26,6 +26,9 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Total)
             .HasPrecision(18, 2);
 
+        builder.Property(o => o.IsStockDeducted)
+            .HasDefaultValue(false);
+
         builder.OwnsOne(o => o.ShippingAddress, a =>
         {
             a.Property(p => p.Street).HasMaxLength(300).HasColumnName("ShippingStreet");

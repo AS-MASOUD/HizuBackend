@@ -18,5 +18,7 @@ public class Order : BaseEntity
 
     public Address ShippingAddress { get; set; } = new();
 
+    public bool IsStockDeducted { get; set; } = false;
+
     public ICollection<OrderItem> Items { get; set; } = new List<OrderItem>();
 }

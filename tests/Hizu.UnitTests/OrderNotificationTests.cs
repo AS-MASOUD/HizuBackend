@@ -163,21 +163,25 @@ public class OrderNotificationTests : IDisposable
             "09121112233",
             "مسعود سلیمانی",
             result.OrderNumber,
-            "در حال آماده‌سازی و ساخت",
+            "در انتظار بررسی و تایید",
             It.IsAny<CancellationToken>()), Times.Once);
 
         _emailServiceMock.Verify(e => e.SendCustomerOrderStatusEmailAsync(
             "customer@example.com",
             "مسعود سلیمانی",
             result.OrderNumber,
-            "در حال آماده‌سازی و ساخت",
+            "در انتظار بررسی و تایید",
             It.IsAny<string>(),
             It.Is<OrderDto>(o => o.OrderNumber == result.OrderNumber),
             It.IsAny<CancellationToken>()), Times.Once);
+
+        // Product stock should NOT be deducted upon user checkout (still 20)
+        var productInDb = await _context.Products.FindAsync(product.Id);
+        productInDb!.StockQuantity.Should().Be(20);
     }
 
     [Fact]
-    public async Task UpdateOrderStatus_ToProcessing_ShouldNotifyCustomer_WithPreparingStatus()
+    public async Task UpdateOrderStatus_ToProcessing_ShouldNotifyCustomer_AndDeductProductStock()
     {
         // Arrange
         var (user, product) = await SeedUserAndProductAsync();
@@ -188,6 +192,7 @@ public class OrderNotificationTests : IDisposable
             OrderNumber = "HIZU-2026-TEST1",
             UserId = user.Id,
             Status = OrderStatus.Pending,
+            IsStockDeducted = false,
             Subtotal = 2500000,
             Total = 2500000,
             ShippingAddress = new Address("میدان ونک", "تهران", "تهران", "1234567890", "ایران"),
@@ -217,6 +222,11 @@ public class OrderNotificationTests : IDisposable
 
         var updatedOrder = await _context.Orders.FindAsync(order.Id);
         updatedOrder!.Status.Should().Be(OrderStatus.Processing);
+        updatedOrder.IsStockDeducted.Should().BeTrue();
+
+        // Verify product stock was atomically deducted (20 - 1 = 19)
+        var updatedProduct = await _context.Products.FindAsync(product.Id);
+        updatedProduct!.StockQuantity.Should().Be(19);
 
         // Verify customer SMS received status for preparing/processing
         _smsServiceMock.Verify(s => s.SendCustomerOrderStatusSmsAsync(
@@ -235,6 +245,57 @@ public class OrderNotificationTests : IDisposable
             It.Is<string>(desc => desc.Contains("آماده‌سازی و ساخت")),
             It.IsAny<OrderDto>(),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateOrderStatus_ToCancelled_ShouldRestoreProductStock_IfPreviouslyDeducted()
+    {
+        // Arrange
+        var (user, product) = await SeedUserAndProductAsync();
+        product.StockQuantity = 19; // Already deducted
+        await _context.SaveChangesAsync();
+
+        var order = new Order
+        {
+            Id = Guid.NewGuid(),
+            OrderNumber = "HIZU-2026-TEST-CANCEL",
+            UserId = user.Id,
+            Status = OrderStatus.Processing,
+            IsStockDeducted = true,
+            Subtotal = 2500000,
+            Total = 2500000,
+            ShippingAddress = new Address("میدان ونک", "تهران", "تهران", "1234567890", "ایران"),
+            Items = new List<OrderItem>
+            {
+                new OrderItem
+                {
+                    ProductId = product.Id,
+                    ProductName = product.Name,
+                    Sku = product.Sku,
+                    Quantity = 1,
+                    UnitPrice = 2500000,
+                    TotalPrice = 2500000
+                }
+            }
+        };
+        _context.Orders.Add(order);
+        await _context.SaveChangesAsync();
+
+        var handler = new UpdateOrderStatusCommandHandler(_context, _smsServiceMock.Object, _emailServiceMock.Object);
+
+        // Act
+        var result = await handler.Handle(new UpdateOrderStatusCommand(order.Id, OrderStatus.Cancelled), CancellationToken.None);
+
+        // Assert
+        result.Should().BeTrue();
+
+        var updatedOrder = await _context.Orders.FindAsync(order.Id);
+        updatedOrder!.Status.Should().Be(OrderStatus.Cancelled);
+        updatedOrder.IsStockDeducted.Should().BeFalse();
+
+        // Verify stock was restored from 19 to 20
+        var restoredProduct = await _context.Products.FindAsync(product.Id);
+        restoredProduct!.StockQuantity.Should().Be(20);
     }
 
     [Fact]
