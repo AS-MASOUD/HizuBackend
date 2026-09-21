@@ -5,7 +5,9 @@ using Hizu.Infrastructure;
 using Hizu.Infrastructure.Persistence;
 using Hizu.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -121,7 +123,30 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableS
 
 app.UseCors("DefaultCorsPolicy");
 
-app.UseStaticFiles();
+var webRootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+if (!Directory.Exists(webRootPath))
+{
+    Directory.CreateDirectory(webRootPath);
+}
+var productsUploadPath = Path.Combine(webRootPath, "uploads", "products");
+if (!Directory.Exists(productsUploadPath))
+{
+    Directory.CreateDirectory(productsUploadPath);
+}
+
+var contentTypeProvider = new FileExtensionContentTypeProvider();
+contentTypeProvider.Mappings[".webp"] = "image/webp";
+contentTypeProvider.Mappings[".step"] = "application/step";
+contentTypeProvider.Mappings[".stp"] = "application/step";
+contentTypeProvider.Mappings[".dxf"] = "image/vnd.dxf";
+contentTypeProvider.Mappings[".stl"] = "model/stl";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(webRootPath),
+    RequestPath = "",
+    ContentTypeProvider = contentTypeProvider
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

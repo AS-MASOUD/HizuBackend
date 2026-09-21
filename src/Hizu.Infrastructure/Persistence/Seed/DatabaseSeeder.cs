@@ -22,6 +22,12 @@ public static class DatabaseSeeder
         await SeedProductsAsync(context, logger);
         await SeedSpecialOrdersAsync(context, logger);
         await SeedCoursesAsync(context, logger);
+        await SeedArticlesAsync(context, logger);
+        await SeedProcessStepsAsync(context, logger);
+        await SeedServicesAsync(context, logger);
+        await SeedFaqsAsync(context, logger);
+        await SeedSlidesAsync(context, logger);
+        await SeedAboutContentAsync(context, logger);
     }
 
     private static async Task SeedRolesAsync(RoleManager<IdentityRole<Guid>> roleManager, ILogger logger)
@@ -825,5 +831,631 @@ public static class DatabaseSeeder
         context.Courses.AddRange(course1, course2, course3);
         await context.SaveChangesAsync();
         logger.LogInformation("Sample courses seeded successfully.");
+    }
+
+    private static async Task SeedArticlesAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.Articles.AnyAsync()) return;
+
+        logger.LogInformation("Seeding initial engineering articles...");
+
+        var articles = new List<Article>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Title = "راهنمای جامع فیلامنت‌های پرینت سه‌بعدی: مقایسه PLA، PETG، ABS، TPU و نایلون کربن",
+                Slug = "3d-printing-filament-comparison-guide",
+                Summary = "بررسی تخصصی خواص مکانیکی، دمای اکستروژن، مقاومت حرارتی و رفتار جمع‌شدگی رایج‌ترین متریال‌های پرینت 3بعدی صنعتی و انتخاب بهترین گزینه برای ساخت قطعات در کارگاه هیزو.",
+                Category = "متریال و فیلامنت",
+                Tags = "پرینت 3بعدی,فیلامنت,PLA,PETG,ABS,PA12-CF,متریال شناسی",
+                Author = "تیم مهندسی مواد هیزو",
+                AuthorRole = "متخصص متریال و ساخت دیجیتال",
+                ReadTimeMinutes = 7,
+                IsPublished = true,
+                PublishedAt = DateTime.UtcNow.AddDays(-3),
+                ViewsCount = 342,
+                CoverImage = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80",
+                Content = @"## مقدمه: انتخاب هوشمندانه متریال در ساخت دیجیتال
+
+انتخاب متریال مناسب در فرآیند پرینت سه‌بعدی (FDM / FFF) نقشی تعیین‌کننده در عملکرد مکانیکی، دقت ابعادی و دوام بلندمدت محصول دارد. هر فیلامنت دارای مشخصات حرارتی، انقباضی و پیوند بین لایه‌ای متفاوتی است که پیش از شروع ساخت باید تحلیل شود.
+
+در این مقاله، تجربیات عملی کارگاه هیزو در تست و تولید هزاران قطعه صنعتی را بررسی می‌کنیم تا تفاوت‌های کلیدی بین متریال‌های پرکاربرد را به دقت بشناسید.
+
+---
+
+### 1. مقایسه جامع پارامترهای فنی فیلامنت‌ها
+
+در جدول زیر، مشخصات کلیدی پنج فیلامنت اصلی مقایسه شده است:
+
+| نوع فیلامنت | دمای نازل (°C) | دمای بستر (°C) | مقاومت ضربه‌ای | انقباض و جمع‌شدگی (Warping) | نیاز به انکلوژر محفظه |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **PLA+** | 195 - 215 | 50 - 60 | متوسط | بسیار کم | خیر |
+| **PETG** | 230 - 250 | 70 - 85 | خوب | کم | اختیاری |
+| **ABS / ASA** | 240 - 260 | 90 - 110 | بسیار بالا | بالا | **بله (ضروری)** |
+| **TPU (انعطاف‌پذیر)** | 210 - 230 | 30 - 50 | عالی (الاستیک) | بسیار کم | خیر |
+| **PA12-CF (نایلون کربن)** | 260 - 290 | 90 - 110 | فوق‌العاده مقاوم | متوسط | بله |
+
+---
+
+### 2. بررسی ویژگی‌های هر فیلامنت در کاربردهای واقعی
+
+#### الف) پلی‌لاکتیک اسید (PLA / PLA+)
+- **مزایا:** پرینت بسیار آسان بدون اعوجاج، جزئیات ظاهری فوق‌العاده، عدم تصاعد گازهای سمی، سازگار با محیط زیست.
+- **معایب:** مقاومت دمایی پایین (تغییر فرم در بالای 55 درجه سانتی‌گراد)، شکنندگی در برابر بارهای دینامیکی ضربه‌ای.
+- **بهترین کاربرد:** نمونه‌های اولیه ارگونومی، ماکت‌های معماری، قالب‌های سیلیکونی غیرحرارتی و کیس‌های دکوراتیو.
+
+#### ب) پلی‌اتیلن ترفتالات گلیکول (PETG)
+- **مزایا:** مقاومت شیمیایی و رطوبتی بالا، انعطاف‌پذیری بیشتر نسبت به PLA، چسبندگی فوق‌العاده بین لایه‌ها، مقاومت حرارتی تا 75 درجه سانتی‌گراد.
+- **معایب:** تمایل به رشته‌زنی (Stringing)، نیاز به کنترل دقیق رطوبت فیلامنت قبل از پرینت.
+- **بهترین کاربرد:** قطعات مکانیکی سبک، قطعات در تماس با آب و محیط بیرون، پایه‌ها و نگه‌دارنده‌های ابزار کارگاه.
+
+#### ج) آکریلونیتریل بوتادین استایرن (ABS / ASA)
+- **مزایا:** مقاومت ضربه‌ای و سایشی بسیار عالی، قابلیت سنباده‌زنی و پولیش با بخار استون، مقاومت دمایی تا 100 درجه سانتی‌گراد.
+- **معایب:** انقباض حرارتی شدید (نیاز به هیت‌بد داغ و محفظه ایزوله کاملاً بسته)، بوی متصاعده هنگام ذوب.
+- **بهترین کاربرد:** قطعات خودرو، محفظه تجهیزات الکترونیکی صنعتی، چرخ‌دنده‌ها و اتصالات تحت تنش.
+
+#### د) نایلون تقویت‌شده با الیاف کربن (PA12-CF)
+- **مزایا:** استحکام مکانیکی نزدیک به آلومینیوم با وزنی بسیار کمتر، مقاومت حرارتی تا 150 درجه، ضریب اصطکاک پایین، ثبات ابعادی بی‌نظیر.
+- **معایب:** قیمت بالا، سایندگی شدید نازل‌های برنجی (نیاز به نازل فولاد سخت یا یاقوت)، جذب رطوبت سریع.
+- **بهترین کاربرد:** قطعات پهپاد و رباتیک پیشرفته، فیکسچرهای صنعتی ماشین‌کاری و براکت‌های جایگزین فلز.
+
+---
+
+> **توصیه فنی کارگاه هیزو:** برای قطعاتی که در زیر نور آفتاب یا محیط باز نصب می‌شوند، متریال **ASA** به مراتب از ABS عملکرد بهتری دارد، زیرا زنجیره پلیمری آن در برابر اشعه فرابنفش (UV) تخریب نمی‌شود.
+
+### نتیجه‌گیری و انتخاب نهایی
+اگر اولویت شما سهولت ساخت و دقت بصری است، PLA انتخاب اول است. برای قطعات کاربردی رومیزی PETG مطمئن‌ترین انتخاب به شمار می‌رود، و برای قطعات نهایی با کارکرد مکانیکی سنگین، نایلون کربن PA12-CF در آزمایشگاه هیزو استاندارد طلایی است."
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Title = "فرآیند طراحی محصول صنعتی: از ایده اولیه و CAD تا نمونه فیزیکی در هیزو",
+                Slug = "industrial-product-design-and-prototyping-workflow",
+                Summary = "گام‌به‌گام نحوه مهندسی محصول، بهینه‌سازی ساخت‌پذیری (DFM)، تحلیل تلورانس‌ها و ساخت پروتوتایپ‌های صنعتی ترکیبی با CNC و پرینت 3بعدی.",
+                Category = "طراحی محصول",
+                Tags = "طراحی صنعتی,DFM,CAD,نمونه‌سازی سریع,مهندسی معکوس",
+                Author = "سهراب پارسا",
+                AuthorRole = "مدیر ارشد طراحی صنعتی هیزو",
+                ReadTimeMinutes = 6,
+                IsPublished = true,
+                PublishedAt = DateTime.UtcNow.AddDays(-6),
+                ViewsCount = 289,
+                CoverImage = "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1200&q=80",
+                Content = @"## از طراحی مفهومی تا کارگاه ساخت فیزیکی
+
+در توسعه محصولات سخت‌افزاری و مکاترونیک، فاصله میان یک ایده روی کاغذ و محصولی که به درستی مونتاژ و آزمایش شود، نیازمند یک فرآیند مهندسی نظام‌مند است. در استودیو طراحی و ساخت هیزو، این مسیر به هفت گام استاندارد تفکیک شده است.
+
+---
+
+### مراحل هفت‌گانه توسعه محصول در هیزو
+
+#### 1. تعریف نیازمندی‌های محصول (PRD)
+پیش از باز کردن نرم‌افزارهای سه‌بعدی، مشخصات عملکردی، شرایط محیطی کارکرد (دما، رطوبت، ارتعاش)، حجم تولید هدف و بازه قیمتی تدوین می‌شود.
+
+#### 2. اسکچینگ و طراحی فرم ارگونومیک
+بررسی تعامل کاربر با قطعه، محل قرارگیری پورت‌ها، کلیدها یا شاسی‌های اتصال از طریق مدل‌سازی خمیری و اسکچ‌های سریع دیجیتال.
+
+#### 3. مدل‌سازی سه‌بعدی پارامتریک در CAD
+ایجاد هندسه دقیق با نرم‌افزارهای SolidWorks و Rhino با تعریف متغیرهای پارامتریک برای اصلاح سریع در فازهای بعدی.
+
+#### 4. تحلیل ساخت‌پذیری (Design for Manufacturing - DFM)
+آیا قطعه بدون ایجاد تیغه‌برخورد در دستگاه 5 محوره CNC قابل ماشین‌کاری است؟ آیا ضخامت دیواره‌ها در پرینت سه‌بعدی تحمل خمش دارند؟ در این مرحله زوایای درفت (Draft Angle) و شعاع فیلت‌ها بهینه‌سازی می‌شوند.
+
+#### 5. پروتوتایپ سریع اولیه (Rapid Prototyping)
+پرینت سریع 24 ساعته با پرینترهای ابعاد بزرگ هیزو جهت ارزیابی ابعاد واقعی در دست (Fit & Form Test).
+
+#### 6. ساخت قطعه عملکردی نهایی با متریال مهندسی
+فرزکاری آلومینیوم 7075 با CNC یا پخت لیزری نایلون کربن برای آزمون‌های بارگذاری مکانیکی و کارکرد تحت فشار واقعی.
+
+#### 7. تولید محدود و تدوین مستندات تولید انبوه
+تهیه نقشه‌های دوبعدی انفجاری مطابق استاندارد ISO، تحلیل تلورانس زنجیره‌ای (Tolerance Stack-up) و فیکسچربندی برای خط تولید.
+
+---
+
+> **نکته کلیدی مهندسی:** هزینه اصلاح یک خطای طراحی در فاز CAD یک دلار است، در فاز پروتوتایپ ده دلار، در فاز قالب‌سازی هزار دلار، و پس از تحویل به مشتری ده‌هزار دلار! آزمون زودهنگام نمونه اولیه، مهم‌ترین ابزار کاهش ریسک پروژه است."
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Title = "فناوری پرینت سه‌بعدی پخت لیزری SLS در برابر FDM صنعتی: کدام متد مناسب پروژه شماست؟",
+                Slug = "industrial-sls-vs-fdm-comparison",
+                Summary = "تحلیل مقایسه‌ای دو روش برتر پرینت صنعتی از نظر خواص ایزوتروپیک، مقاومت در برابر فشار، عدم نیاز به ساپورت و صرفه اقتصادی در تیراژهای نیمه‌صنعتی.",
+                Category = "پرینت 3بعدی",
+                Tags = "SLS,FDM,فناوری ساخت,پرینت صنعتی,تکنولوژی",
+                Author = "کارگروه فناوری هیزو",
+                AuthorRole = "بخش پژوهش و توسعه",
+                ReadTimeMinutes = 5,
+                IsPublished = true,
+                PublishedAt = DateTime.UtcNow.AddDays(-9),
+                ViewsCount = 195,
+                CoverImage = "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?auto=format&fit=crop&w=1200&q=80",
+                Content = @"## رقابت دو غول ساخت افزایشی: FDM و SLS
+
+فناوری‌های **FDM (Fused Deposition Modeling)** و **SLS (Selective Laser Sintering)** هر دو ستون‌های اصلی ساخت قطعات پلیمری هستند، اما رویکرد آن‌ها در لایه‌نشانی متریال کاملاً متفاوت است.
+
+### تفاوت اساسی مکانیسم ساخت
+- در **FDM** یک رشته ترموپلاستیک پیوسته ذوب شده و روی میز کار لایه‌به‌لایه‌ اکسترود می‌شود. پیوند بین لایه‌ها فیزیکی-حرارتی است و مقاومت در جهت محور Z کمتر از محورهای X و Y است (خاصیت آن‌ایزوتروپیک).
+- در **SLS** یک پرتو لیزر پرتوان CO2 ذرات میکرونی پودر پلیمر را به یکدیگر جوش می‌دهد. پودر فشرده نشده پیرامون قطعه به عنوان ساپورت عمل کرده و نیاز به هرگونه داربست ساپورتی را از بین می‌برد. در نتیجه قطعه در تمام جهات خواص مقاومتی یکنواخت (ایزوتروپیک) دارد.
+
+---
+
+### جدول مقایسه سر‌به‌سر
+
+| مشخصه فنی | تکنولوژی FDM صنعتی | تکنولوژی SLS پخت لیزری |
+| :--- | :--- | :--- |
+| **آزادی هندسی و شیارهای داخلی** | متوسط (محدود به زاویه ساپورت) | **نامحدود (ساپورت طبیعی با پودر)** |
+| **رفتار مکانیکی محور Z** | حدود 60% تا 75% محور XY | **بالای 90% (تقریباً ایزوتروپیک کامل)** |
+| **زبری سطح و کیفیت ظاهری** | خطوط لایه مشهود (نیاز به سنباده) | سطح مات شنی یکنواخت و حرفه‌ای |
+| **هزینه نمونه تکی** | بسیار اقتصادی | مناسب برای قطعات حساس و تیراژ متوسط |
+| **هوابندی و مقاومت در برابر فشار مایعات** | نیاز به سیلر و پرداخت شیمیایی | مناسب برای محفظه‌های فیلتر و هیدرولیک سبک |
+
+---
+
+### چه زمانی کدام روش را در هیزو سفارش دهیم؟
+1. **FDM را انتخاب کنید اگر:** به دنبال پروتوتایپ سریع ارزان‌قیمت، بررسی ابعاد قطعه یا قطعات حجیم بزرگ‌تر از 500 میلیمتر با هزینه مناسب هستید.
+2. **SLS را انتخاب کنید اگر:** قطعه نهایی با کانال‌های خنک‌کاری پیچیده، قطعات زنده یا لولایی متحرک یکپارچه، یا قطعات نهایی با ظاهر کارخانه‌ای و مقاومت برابر در تمام محورها می‌خواهید."
+            }
+        };
+
+        context.Articles.AddRange(articles);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Engineering articles seeded successfully.");
+    }
+
+    private static async Task SeedProcessStepsAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.ProcessSteps.AnyAsync()) return;
+
+        logger.LogInformation("Seeding workflow process steps...");
+
+        var steps = new List<ProcessStep>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                StepNumber = "01",
+                Title = "کشف و تحلیل نیاز",
+                Description = "دریافت فایل CAD، اسکچ یا نمونه فیزیکی و بررسی اهداف پروژه.",
+                DisplayOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                StepNumber = "02",
+                Title = "بررسی مهندسی DFM",
+                Description = "بهینه‌سازی هندسه برای ساخت و تعیین دقیق تلرانس‌های مجاز.",
+                DisplayOrder = 2,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                StepNumber = "03",
+                Title = "انتخاب متریال",
+                Description = "تطبیق آلیاژ آلومینیوم، چوب، فیبرکربن یا رزین متناسب با کارکرد.",
+                DisplayOrder = 3,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                StepNumber = "04",
+                Title = "تولید دقیق کارگاهی",
+                Description = "اجرای ماشین‌کاری CNC، پرینت صنعتی و مونتاژ قطعات در آتلیه.",
+                DisplayOrder = 4,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                StepNumber = "05",
+                Title = "تست کیفیت و تحویل",
+                Description = "اندازه‌گیری میکرومتری، کنترل کیفیت نهایی و بسته‌بندی ایمن.",
+                DisplayOrder = 5,
+                IsActive = true
+            }
+        };
+
+        context.ProcessSteps.AddRange(steps);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Workflow process steps seeded successfully.");
+    }
+
+    private static async Task SeedServicesAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.FabricationServices.AnyAsync()) return;
+
+        logger.LogInformation("Seeding fabrication services...");
+
+        var services = new List<FabricationService>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Slug = "3d-print",
+                Code = "PROTOCOL 01",
+                Badge = "FDM / SLS / SLA | PA12-CF",
+                Coord = "15mm",
+                Title = "پرینت 3بعدی صنعتی و نمونه‌سازی سریع",
+                ShortTitle = "پرینت 3بعدی صنعتی",
+                Subtitle = "LARGE-FORMAT INDUSTRIAL 3D PRINTING & RAPID TOOLING",
+                Description = "تولید نمونه‌های دقیق مهندسی، جیگ و فیکسچرهای سبک، پوسته‌های محافظ و قطعات تیراژ با مجهزترین پرینترهای ابعاد صنعتی. هیزو با تکیه بر تکنولوژی‌های FDM با محفظه حرارتی فعال و SLS نوری، قابلیت تزریق و پرینت پلیمرهای مقاوم در برابر ضربه، سایش و حرارت‌های بالا را فراهم کرده است.",
+                ShortDescription = "تولید نمونه اولیه دقیق و قطعات نهایی با پلیمرهای مهندسی FDM/SLA/SLS و نایلون کربن.",
+                ImageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80",
+                IconName = "Layers",
+                SpecsJson = "[{\"label\":\"تلورانس ابعادی\",\"value\":\"±0.05 میلی‌متر مطابق استاندارد\"},{\"label\":\"حداکثر ابعاد ساخت یکپارچه\",\"value\":\"500×500×600 میلی‌متر\"},{\"label\":\"رزولوشن لایه‌گذاری\",\"value\":\"20 تا 200 میکرون قابل انتخاب\"},{\"label\":\"مقاومت حرارتی پلیمرها\",\"value\":\"تا 180 درجه سانتی‌گراد نسوز\"}]",
+                MaterialsJson = "[\"نایلون فیبر کربن PA12-CF\",\"پلی‌کربنات نسوز (PC)\",\"رزین مهندسی Tough\",\"ABS-ESD آنتی‌استاتیک\",\"پلیمرهای انعطاف‌پذیر TPU\"]",
+                ApplicationsJson = "[\"قطعات سبک پهپاد و هوافضا\",\"پوسته و فریم تجهیزات رباتیک\",\"قطعات تست کارگاهی و جایگزین آلومینیوم\",\"هوزینگ‌های ضدآب الکترونیک\"]",
+                Equipment = "پارک پرینترهای صنعتی Bambu Lab با محفظه محصور، سیستم لیزری SLS نوری و پرینترهای فرمت بزرگ FDM",
+                DisplayOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Slug = "cnc",
+                Code = "PROTOCOL 02",
+                Badge = "ISO 2768-FINE | ±0.01mm",
+                Coord = "±0.01",
+                Title = "ماشین‌کاری 5 محوره همزمان CNC",
+                ShortTitle = "ماشین‌کاری CNC",
+                Subtitle = "SIMULTANEOUS 5-AXIS PRECISION CNC MILLING",
+                Description = "فرزکاری فوق‌دقیق 5 محوره همزمان برای قطعات با هندسه‌های پیچیده سه‌بعدی و سطوح آزاد (Freeform) بدون نیاز به بستن‌های چندباره و حذف خطای زوایای متقاطع. کارگاه هیزو با تجهیزات تخصصی و ابزارگیرهای صلب، قطعات حساس هوافضا، هیدرولیک و قالب‌های دقیق را از شمش‌های یکپارچه فلزی فرزکاری می‌کند.",
+                ShortDescription = "فرزکاری 5 محوره فلزات سبک، برنج، چوب و ساخت قالب‌های مستحکم با تلورانس ابعادی میکرونی.",
+                ImageUrl = "https://images.unsplash.com/photo-1565043589221-1a6fd9ae45c7?auto=format&fit=crop&w=1200&q=80",
+                IconName = "Wrench",
+                SpecsJson = "[{\"label\":\"دقت موقعیت‌یابی و تکرارپذیری\",\"value\":\"±0.008 میلی‌متر میکرونی\"},{\"label\":\"محدوده کارگیر 5 محوره\",\"value\":\"800×600×500 میلی‌متر\"},{\"label\":\"زبری سطح پرداختی (Ra)\",\"value\":\"تا 0.4 میکرومتر آینه‌ای\"},{\"label\":\"سرعت چرخش اسپیندل\",\"value\":\"24,000 دور در دقیقه با کولانت\"}]",
+                MaterialsJson = "[\"آلومینیوم 7075-T6 و 6061\",\"برنج آلیاژی شمش\",\"استیل نگیر 316 و 304\",\"فولاد ابزار SPK سخت‌کاری شده\",\"چوب‌های سخت متراکم صنعتی\"]",
+                ApplicationsJson = "[\"پره‌های توربین و ایمپلرهای دینامیک\",\"پوسته‌های هیدرولیک و پنوماتیک\",\"براکت‌های حساس رباتیک و اتوماسیون\",\"قالب‌های فرم‌دهی و کشش دقیق\"]",
+                Equipment = "مرکز فرزکاری 5 محوره همزمان، سیستم پروب لیزری Renishaw و خنک‌کاری پیشرفته مایع تحت فشار",
+                DisplayOrder = 2,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Slug = "laser",
+                Code = "PROTOCOL 03",
+                Badge = "1064nm FIBER & CO2 HIGH-POWER",
+                Coord = "1064nm",
+                Title = "برش فایبر نوری و حکاکی پرسرعت لیزر",
+                ShortTitle = "برش و لیزر",
+                Subtitle = "ULTRA-FAST FIBER & CO2 LASER PROCESSING",
+                Description = "برش نوری بی‌نقص انواع ورق‌های فلزی سخت و متریال‌های غیرفلزی با حداقل منطقه متاثر از حرارت (HAZ). استفاده از لیزر فایبر با طول موج 1064 نانومتر و گازهای خلوص بالای نیتروژن و اکسیژن، لبه‌هایی کاملاً صیقلی، عمود و بدون اکسیداسیون یا پلیسه را تضمین می‌کند.",
+                ShortDescription = "برش فوق سریع و حکاکی فیبر و CO2 روی چوب طبیعی، پلکسی و ورق‌های سخت صنعتی.",
+                ImageUrl = "https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80",
+                IconName = "Sparkles",
+                SpecsJson = "[{\"label\":\"حداکثر ضخامت برش فولاد\",\"value\":\"تا 20 میلی‌متر با نیتروژن خلوص 99.99%\"},{\"label\":\"دقت پرتو و نقطه فوکوس\",\"value\":\"±0.03 میلی‌متر روی کانون\"},{\"label\":\"توان سورس فایبر نوری\",\"value\":\"6000 وات پیوسته صنعتی\"},{\"label\":\"حکاکی نوری عمیق\",\"value\":\"بارکد، شماره فنی، لوگو و درجه‌بندی\"}]",
+                MaterialsJson = "[\"ورق آهن St37 و St52\",\"ورق استنلس استیل 304 و 316\",\"ورق مس خالص و برنج فنری\",\"آلومینیوم سری 5000 و 6000\",\"چوب طبیعی، MDF و پلکسی گلاس\"]",
+                ApplicationsJson = "[\"شاسی‌های مدولار الکترونیک\",\"پنل‌های رک و جعبه‌های مخابراتی\",\"فلنج‌ها و دیسک‌های ترمز صنعتی\",\"المان‌های مدرن معماری و مشبک\"]",
+                Equipment = "میز برش فایبر 3000×1500 میلی‌متر با هد فوکوس اتوماتیک Precitec و سیستم تزریق گاز نیتروژن و اکسیژن",
+                DisplayOrder = 3,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Slug = "dfm",
+                Code = "PROTOCOL 04",
+                Badge = "METROLOGY GRADE | 5-MICRON SCAN",
+                Coord = "ISO CAD",
+                Title = "اسکن نوری سه‌بعدی و بهینه‌سازی ساخت (DFM)",
+                ShortTitle = "مهندسی معکوس",
+                Subtitle = "METROLOGY 3D SCANNING & DESIGN FOR MANUFACTURING",
+                Description = "اسکن اپتیکال بدون تماس قطعات مستهلک، نایاب یا دست‌ساز با رزولوشن میکرونی، استخراج ابر نقاط متراکم و بازسازی مدل‌های پارامتریک CAD در نرم‌افزارهای مهندسی. در مرحله بعد، تحلیل جامع قابلیت ساخت (DFM) جهت سبک‌سازی سازه (Topology Optimization) و کاهش هزینه‌های تولید انجام می‌گیرد.",
+                ShortDescription = "اسکن سه‌بعدی نوری، تلورانس‌گذاری هندسی و بهینه‌سازی فایل‌های CAD برای ساخت تجاری.",
+                ImageUrl = "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=1200&q=80",
+                IconName = "Scan",
+                SpecsJson = "[{\"label\":\"دقت اندازه‌گیری اسکنر\",\"value\":\"5 میکرومتر (گواهی کالیبراسیون Metrology)\"},{\"label\":\"فرمت فایل‌های خروجی\",\"value\":\"STEP, IGES, Parasolid, Native SolidWorks/NX\"},{\"label\":\"تحلیل المان محدود (FEA)\",\"value\":\"استاتیک، خستگی و توزیع تنش فون مایسز\"},{\"label\":\"گزارش بازرسی ابعادی (Inspection)\",\"value\":\"نقشه انحراف رنگی با تلورانس GD&T\"}]",
+                MaterialsJson = "[\"اسکن کلیه قطعات فلزی، پلیمری و کامپوزیتی\",\"اسکن قطعات ریخته‌گری با سطوح نامنظم\",\"قالب‌های قدیمی و قطعات از رده خارج\"]",
+                ApplicationsJson = "[\"بازسازی قطعات نایاب خطوط تولید خارجی\",\"تحلیل عیوب و انحرافات ابعادی قطعه ساخته شده\",\"بهینه‌سازی توپولوژی و کاهش وزن تا 40%\",\"تبدیل نقشه‌های دوبعدی به مدل‌های سه‌بعدی\"]",
+                Equipment = "اسکنر نوری سه‌بعدی نور آبی (Blue Light Optical Scanner) و ایستگاه‌های پردازش محاسباتی Geomagic Control X",
+                DisplayOrder = 4,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Slug = "automation",
+                Code = "PROTOCOL 05",
+                Badge = "EMBEDDED CONTROL & SERVO AUTOMATION",
+                Coord = "PLC/ARM",
+                Title = "توسعه مکاترونیک، رباتیک و ماشین‌آلات سفارشی",
+                ShortTitle = "ساخت ماشین‌آلات",
+                Subtitle = "CUSTOM MECHATRONIC SYSTEMS & WORKSHOP AUTOMATION",
+                Description = "مهندسی یکپارچه مکانیک، برق صنعتی و نرم‌افزار برای توسعه سیستم‌های خودکار خط تولید، ربات‌های کارتزین، استیج‌های تست لرزش و خستگی، و فیکسچرهای هوشمند مونتاژ. هیزو کلیه مراحل را از تحلیل فیزیکی و نقشه‌کشی تا مونتاژ قطعات، سیم‌کشی و برنامه‌نویسی میکروکنترلر به صورت درون‌سازمانی به اجرا درمی‌آورد.",
+                ShortDescription = "طراحی مکاترونیک، اسمبل فیزیکی و برنامه‌نویسی ماشین‌های خط تولید و سیستم‌های اتوماسیون.",
+                ImageUrl = "https://images.unsplash.com/photo-1581092580497-e0d23cbdf1dc?auto=format&fit=crop&w=1200&q=80",
+                IconName = "Cog",
+                SpecsJson = "[{\"label\":\"سیستم‌های هدایت حرکتی\",\"value\":\"بال‌اسکروهای پیش‌بارگذاری C3 و ریل‌های خطی\"},{\"label\":\"محرک‌ها و موتورها\",\"value\":\"سروموتورهای سنکرون AC و استپرهای حلقه بسته\"},{\"label\":\"معماری کنترلر صنعتی\",\"value\":\"PLC صنعتی زیمنس، دلتا و بردهای امبدد ARM\"},{\"label\":\"رابط کاربری و مانیتورینگ\",\"value\":\"HMI لمسی صنعتی و اتصال شبکه Modbus/CAN\"}]",
+                MaterialsJson = "[\"شاسی‌های پروفیل آلومینیوم مهندسی سخت\",\"صفحات صلب فولادی تنش‌زدایی شده\",\"پوشش‌های محافظ شفاف پلی‌کربنات صنعتی\"]",
+                ApplicationsJson = "[\"دستگاه‌های تست دوام و لرزش قطعات\",\"ربات‌های پیک اند پلیس و چیدمان کارگاهی\",\"فیکسچرهای تست عایق و ابعاد آنلاین\",\"تجهیزات مکانیزه بسته‌بندی و مونتاژ\"]",
+                Equipment = "آزمایشگاه مونتاژ مکاترونیک، دستگاه‌های جوشکاری دقیق TIG، اسیلوسکوپ‌های دیجیتال و تست‌بنچ کالیبراسیون سنسور",
+                DisplayOrder = 5,
+                IsActive = true
+            }
+        };
+
+        context.FabricationServices.AddRange(services);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Fabrication services seeded successfully.");
+    }
+
+    private static async Task SeedFaqsAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.FaqItems.AnyAsync()) return;
+
+        logger.LogInformation("Seeding FAQ items...");
+
+        var faqs = new List<FaqItem>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Question = "چه فرمت‌های فایلی برای بررسی DFM و استعلام ساخت در هیزو پذیرفته می‌شود؟",
+                Badge = "CAD / CAM / VECTOR",
+                Answer = "ما تمامی فایل‌های استاندارد طراحی سه‌بعدی و مهندسی را در سامانه هیزو پردازش و بررسی می‌کنیم: مدل‌های سه‌بعدی و قالب: .STEP, .STP, .IGES, .SLDPRT, .X_T | پرینت 3بعدی صنعتی: .STL, .OBJ, .3MF (Mesh High-Poly) | برش لیزر و CNC تختی: .DXF, .DWG, .AI, .SVG | نقشه‌های مهندسی ساخت: فایل‌های نقشه‌کشی PDF با مشخصات تلورانسی GD&T.",
+                DisplayOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Question = "تلورانس ابعادی و دقت ماشین‌کاری CNC و پرینت در هیزو چگونه تضمین می‌شود؟",
+                Badge = "ISO 2768-m",
+                Answer = "در فرآیند فرزکاری 5 محوره CNC، تلورانس هندسی و ابعادی قطعات تا محدوده ±0.01 میلی‌متر (مطابق استاندارد بین‌المللی ISO 2768-Fine) تضمین می‌گردد. در پرینت سه‌بعدی صنعتی با روش‌های SLS و رزین مهندسی SLA، دقت ابعادی در بازه ±0.05 میلی‌متر قرار دارد. کلیه قطعات حساس صنعتی همراه با گزارش اندازه‌گیری ابعادی CMM و برگه کنترل کیفیت نهایی تحویل می‌گردند.",
+                DisplayOrder = 2,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Question = "زمان‌بندی تحویل سفارش‌های ساخت فوری و نمونه‌های اولیه (Prototype) چقدر است؟",
+                Badge = "FAST TURNAROUND",
+                Answer = "برای قطعات پرینت سه‌بعدی و برش لیزر فوری، تحویل نمونه اولیه بین 24 الی 48 ساعت کاری انجام می‌شود. سفارش‌های ماشین‌کاری دقیق CNC بسته به پیچیدگی سطوح 5 محوره، نوع آلیاژ و عملیات حرارتی بین 3 الی 6 روز کاری زمان‌بندی خواهند شد.",
+                DisplayOrder = 3,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Question = "آیا امکان سفارش تیراژ محدود (Low-Volume Manufacturing) یا نمونه تک وجود دارد؟",
+                Badge = "PROTOTYPE TO BATCH",
+                Answer = "بله؛ ساختار کارگاه و خطوط ساخت هیزو بر پایه تولید انعطاف‌پذیر (Agile Fabrication) طراحی شده‌اند. شما می‌توانید از 1 قطعه نمونه اولیه تکی تا تیراژهای 500 الی 10,000 عددی را با هزینه بهینه ابزارسازی و بدون نیاز به هزینه‌های سنگین قالب‌سازی سفارش دهید.",
+                DisplayOrder = 4,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Question = "چه متریال‌ها و پرداخت‌های سطحی (Surface Finishing) در کارگاه اجرا می‌شود؟",
+                Badge = "FINISHING LAB",
+                Answer = "متریال‌های قابل پردازش در هیزو شامل آلیاژهای آلومینیوم سری 6000 و 7075، برنج صنعتی، فولادهای زنگ‌نزن 304 و 316، تیتانیوم، تفلون صنعتی POM، پلیمرهای کربنی و چوب‌های سخت عمل‌آوری شده است. خدمات تکمیلی شامل آنودایز مات و رنگی، سندبلاست شیشه‌ای، پوشش‌های ضدسایش، پولیش مکانیکی و حکاکی نوری مشخصات فنی با لیزر می‌باشد.",
+                DisplayOrder = 5,
+                IsActive = true
+            }
+        };
+
+        context.FaqItems.AddRange(faqs);
+        await context.SaveChangesAsync();
+        logger.LogInformation("FAQ items seeded successfully.");
+    }
+
+    private static async Task SeedSlidesAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.HeroSlides.AnyAsync()) return;
+
+        logger.LogInformation("Seeding hero slides...");
+
+        var slides = new List<HeroSlide>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ImageUrl = "/slideshow/slide-1.jpg",
+                Title = "کارگاه ماشین‌کاری پیشرفته 5 محوره CNC",
+                Subtitle = "CAM 01 // CNC MILLING & PROTOTYPING",
+                Badge = "TOLERANCE ±0.01mm",
+                DisplayOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ImageUrl = "/slideshow/slide-2.jpg",
+                Title = "پرینت 3بعدی صنعتی ابعاد بزرگ",
+                Subtitle = "ADDITIVE 02 // INDUSTRIAL SLS & FDM",
+                Badge = "PA12 CARBON / RESIN",
+                DisplayOrder = 2,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ImageUrl = "/slideshow/slide-3.jpg",
+                Title = "برش و حکاکی فوق دقیق لیزر فایبر",
+                Subtitle = "OPTICS 03 // FIBER LASER 1064nm",
+                Badge = "METALS & ACRYLIC",
+                DisplayOrder = 3,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                ImageUrl = "/slideshow/slide-4.jpg",
+                Title = "توسعه مکاترونیک و ساخت خط تولید",
+                Subtitle = "SYSTEMS 04 // INDUSTRIAL AUTOMATION",
+                Badge = "DFM & ASSEMBLY",
+                DisplayOrder = 4,
+                IsActive = true
+            }
+        };
+
+        context.HeroSlides.AddRange(slides);
+        await context.SaveChangesAsync();
+        logger.LogInformation("Hero slides seeded successfully.");
+    }
+
+    private static async Task SeedAboutContentAsync(ApplicationDbContext context, ILogger logger)
+    {
+        if (await context.TeamMembers.AnyAsync() || await context.CompanyGoals.AnyAsync() || await context.CompanyMilestones.AnyAsync()) return;
+
+        logger.LogInformation("Seeding about page content (team, goals, milestones)...");
+
+        var team = new List<TeamMember>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "مهندس علیرضا رادمنش",
+                Role = "بنیان‌گذار و مدیر ارشد مهندسی ساخت",
+                EnglishRole = "CHIEF FABRICATION ENGINEER & CO-FOUNDER",
+                Education = "کارشناسی ارشد مهندسی مکانیک - ساخت و تولید",
+                ImageUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80",
+                Bio = "با بیش از 10 سال سابقه تخصصی در برنامه‌نویسی پیشرفته CAM، راه‌اندازی مراکز فرزکاری 5 محوره همزمان و طراحی سازه‌های دقیق هوافضا و رباتیک. علیرضا با هدف پل زدن میان ایده‌های بلندپروازانه مهندسی و واقعیت ماشین‌کاری صلب، استودیو هیزو را پایه‌گذاری کرد.",
+                SpecialtiesJson = "[\"فرزکاری همزمان 5 محوره\",\"برنامه‌نویسی Mastercam & Hypermill\",\"تلورانس‌گذاری هندسی (GD&T)\",\"متالورژی آلومینیوم 7075\"]",
+                Email = "a.radmanesh@hizustudio.ir",
+                DisplayOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "مهندس سارا نیک‌پیام",
+                Role = "مدیر طراحی محاسباتی و تحلیل DFM",
+                EnglishRole = "COMPUTATIONAL DESIGN LEAD & DFM SPECIALIST",
+                Education = "کارشناسی ارشد معماری دیجیتال و الگوریتم‌های ساخت",
+                ImageUrl = "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80",
+                Bio = "متخصص فرم‌یابی پارامتریک، شبیه‌سازی تنش المان محدود (FEA) و تبدیل طرح‌های آزاد مفهومی به مدل‌های بهینه‌سازی‌شده برای تولید صنعتی (DFM). سارا مسئول بازطراحی ساختاری قطعات با متد بهینه‌سازی توپولوژی جهت کاهش وزن و هزینه در کارگاه هیزو است.",
+                SpecialtiesJson = "[\"طراحی الگوریتمیک Rhino/Grasshopper\",\"بهینه‌سازی توپولوژی (Topology Opt)\",\"اسکن نوری سه‌بعدی و مهندسی معکوس\",\"پلیمرهای پیشرفته و SLS\"]",
+                Email = "s.nikpayam@hizustudio.ir",
+                DisplayOrder = 2,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "مهندس پویا داوودی",
+                Role = "سرپرست تحقیق و توسعه مکاترونیک و اتوماسیون",
+                EnglishRole = "MECHATRONICS & EMBEDDED SYSTEMS LEAD",
+                Education = "کارشناسی ارشد مهندسی مکاترونیک و کنترل صنعتی",
+                ImageUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80",
+                Bio = "طراح و معمار سیستم‌های حرکتی خودکار، استیج‌های تست لرزش و کنترلرهای فیدبک‌دار کارگاهی. پویا رهبری پروژه‌های ساخت ماشین‌آلات خاص، درایورهای سروموتور دقیق و سیستم‌های کنترل تعبیه‌شده (Embedded ARM) را در هیزو بر عهده دارد.",
+                SpecialtiesJson = "[\"کنترلرهای حرکت صنعتی (Motion Control)\",\"برنامه‌نویسی PLC زیمنس و دلتا\",\"طراحی بردهای صنعتی STM32\",\"طراحی مکانیزم‌های رباتیک\"]",
+                Email = "p.davoodi@hizustudio.ir",
+                DisplayOrder = 3,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "مهندس کیان مهرداد",
+                Role = "مدیر کنترل کیفیت (QC) و متریال صنعتی",
+                EnglishRole = "QUALITY ASSURANCE & MATERIALS SPECIALIST",
+                Education = "کارشناسی ارشد مهندسی مواد و متالورژی صنعتی",
+                ImageUrl = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80",
+                Bio = "مسئول اعتبارسنجی ابعادی قطعات با ابزارهای دقیق متولوژی، آزمون‌های سایش، مقاومت کششی و نظارت مستقیم بر کنترل کیفیت تلورانسی ISO 2768-Fine. کیان با وسواس مهندسی تضمین می‌کند که هیچ قطعه‌ای بدون تاییدیه تست متالورژی از هیزو خارج نشود.",
+                SpecialtiesJson = "[\"کنترل ابعادی اپتیکال و CMM\",\"استاندارد تلورانس ISO 2768\",\"آنالیز ساختار پلیمرهای کربنی\",\"صدور گواهینامه‌های کیفی ساخت\"]",
+                Email = "k.mehrdad@hizustudio.ir",
+                DisplayOrder = 4,
+                IsActive = true
+            }
+        };
+
+        var goals = new List<CompanyGoal>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                GoalNumber = "01",
+                Title = "بومی‌سازی قطعات های‌تک و دقیق",
+                Subtitle = "PRECISION LOCALIZATION",
+                Description = "تامین و ساخت قطعات فوق‌حساس مکانیکی با تلورانس‌های میکرونی در داخل کشور، بی‌نیاز کردن شرکت‌های دانش‌بنیان، تجهیزات پزشکی و رباتیک از واردات گران‌قیمت.",
+                IconName = "Cpu",
+                DisplayOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                GoalNumber = "02",
+                Title = "نهادینه‌سازی فرهنگ DFM",
+                Subtitle = "DESIGN FOR MANUFACTURING",
+                Description = "اصلاح و بهینه‌سازی مدل‌های سه‌بعدی پیش از برش یا فرزکاری، با هدف به صفر رساندن خطاهای تولیدی، کاهش وزن سازه و پایین آوردن هزینه‌های تمام‌شده.",
+                IconName = "Target",
+                DisplayOrder = 2,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                GoalNumber = "03",
+                Title = "تولید با متریال ناب و اصیل",
+                Subtitle = "MATERIAL INTEGRITY",
+                Description = "پرهیز قطعی از آلیاژهای ضایعاتی یا پلیمرهای بازیافتی؛ استفاده انحصاری از آلومینیوم 7075 گواهی‌دار، برنج شمش، فولادهای استاندارد و نایلون کربن مقاوم.",
+                IconName = "ShieldCheck",
+                DisplayOrder = 3,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                GoalNumber = "04",
+                Title = "ترویج ساخت دیجیتال و آزمایشگاه باز",
+                Subtitle = "OPEN FABRICATION LAB",
+                Description = "برگزاری دوره‌های تخصصی، انتقال تجربه ساخت به طراحان و مهندسان جوان و انتشار مقالات فنی برای ارتقای دانش ساخت در اکوسیستم سخت‌افزاری کشور.",
+                IconName = "Sparkles",
+                DisplayOrder = 4,
+                IsActive = true
+            }
+        };
+
+        var milestones = new List<CompanyMilestone>
+        {
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Year = "1400",
+                Title = "تاسیس استودیو ساخت هیزو",
+                Description = "تجهیز کارگاه اولیه در تهران با اولین ماشین‌های 3 محوره فرزکاری و پرینترهای ابعاد متوسط FDM.",
+                DisplayOrder = 1,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Year = "1401",
+                Title = "ورود تکنولوژی SLS و فیبر کربن",
+                Description = "راه‌اندازی خط پرینت پیشرفته با نایلون کربن PA12-CF و ثبت اولین قراردادهای تامین قطعات رباتیک صنعتی.",
+                DisplayOrder = 2,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Year = "1402",
+                Title = "ارتقا به ماشین‌کاری 5 محوره همزمان",
+                Description = "نصب سنتر 5 محوره همزمان CNC، اسکنر نوری 3بعدی متولوژی و دریافت گواهی انطباق استاندارد ISO 2768-Fine.",
+                DisplayOrder = 3,
+                IsActive = true
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                Year = "1403",
+                Title = "توسعه دپارتمان مکاترونیک و پلتفرم آنلاین",
+                Description = "راه‌اندازی آزمایشگاه تست مکاترونیک، سامانه آنلاین استعلام فایل CAD و راه‌اندازی فروشگاه قطعات پیش‌ساخته هیزو.",
+                DisplayOrder = 4,
+                IsActive = true
+            }
+        };
+
+        context.TeamMembers.AddRange(team);
+        context.CompanyGoals.AddRange(goals);
+        context.CompanyMilestones.AddRange(milestones);
+        await context.SaveChangesAsync();
+        logger.LogInformation("About page content seeded successfully.");
     }
 }

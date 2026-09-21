@@ -30,6 +30,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<CourseSection> CourseSections => Set<CourseSection>();
     public DbSet<CourseEpisode> CourseEpisodes => Set<CourseEpisode>();
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
+    public DbSet<ProcessStep> ProcessSteps => Set<ProcessStep>();
+    public DbSet<FabricationService> FabricationServices => Set<FabricationService>();
+    public DbSet<FaqItem> FaqItems => Set<FaqItem>();
+    public DbSet<HeroSlide> HeroSlides => Set<HeroSlide>();
+    public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
+    public DbSet<CompanyGoal> CompanyGoals => Set<CompanyGoal>();
+    public DbSet<CompanyMilestone> CompanyMilestones => Set<CompanyMilestone>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

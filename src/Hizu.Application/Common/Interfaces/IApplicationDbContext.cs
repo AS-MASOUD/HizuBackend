@@ -22,6 +22,13 @@ public interface IApplicationDbContext
     DbSet<CourseSection> CourseSections { get; }
     DbSet<CourseEpisode> CourseEpisodes { get; }
     DbSet<CourseEnrollment> CourseEnrollments { get; }
+    DbSet<ProcessStep> ProcessSteps { get; }
+    DbSet<FabricationService> FabricationServices { get; }
+    DbSet<FaqItem> FaqItems { get; }
+    DbSet<HeroSlide> HeroSlides { get; }
+    DbSet<TeamMember> TeamMembers { get; }
+    DbSet<CompanyGoal> CompanyGoals { get; }
+    DbSet<CompanyMilestone> CompanyMilestones { get; }
     DbSet<ApplicationUser> Users { get; }
 
     DatabaseFacade Database { get; }
