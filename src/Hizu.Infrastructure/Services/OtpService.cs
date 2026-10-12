@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Hizu.Application.Common.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Hizu.Infrastructure.Services;
@@ -11,6 +12,8 @@ public class OtpService : IOtpService
     private readonly IMemoryCache _memoryCache;
     private readonly ISmsService _smsService;
     private readonly IEmailService _emailService;
+    private readonly IBaleOtpService _baleOtpService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<OtpService> _logger;
 
     private const int OtpExpiryMinutes = 2;
@@ -21,11 +24,15 @@ public class OtpService : IOtpService
         IMemoryCache memoryCache,
         ISmsService smsService,
         IEmailService emailService,
+        IBaleOtpService baleOtpService,
+        IConfiguration configuration,
         ILogger<OtpService> logger)
     {
         _memoryCache = memoryCache;
         _smsService = smsService;
         _emailService = emailService;
+        _baleOtpService = baleOtpService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -63,23 +70,65 @@ public class OtpService : IOtpService
 
         _memoryCache.Set(cacheKey, entry, TimeSpan.FromMinutes(OtpExpiryMinutes));
 
-        bool dispatched;
+        bool dispatched = false;
+        string message;
+        string deliveryChannel = "unknown";
+
         if (normalized.Contains('@'))
         {
             dispatched = await _emailService.SendOtpEmailAsync(normalized, code, cancellationToken);
+            deliveryChannel = "email";
+            message = dispatched ? "کد تایید به ایمیل شما ارسال شد." : "خطا در ارسال ایمیل کد تایید.";
         }
         else
         {
-            dispatched = await _smsService.SendOtpAsync(normalized, code, cancellationToken);
+            // Phone recipient: Check Bale Safir integration
+            var isBaleEnabled = _configuration.GetValue<bool>("Bale:Enabled", false);
+            var preferBale = _configuration.GetValue<bool>("Bale:PreferBale", true);
+            var fallbackToSms = _configuration.GetValue<bool>("Bale:FallbackToSms", true);
+
+            if (isBaleEnabled && preferBale)
+            {
+                var baleResult = await _baleOtpService.SendOtpAsync(normalized, code, cancellationToken: cancellationToken);
+                if (baleResult.Success)
+                {
+                    dispatched = true;
+                    deliveryChannel = "bale";
+                    message = "کد تایید از طریق پیام‌رسان بله ارسال شد.";
+                }
+                else if (fallbackToSms)
+                {
+                    _logger.LogWarning("Bale OTP delivery failed for {Recipient} (ErrorCode: {Code}, IsNotBaleUser: {IsNotBale}). Falling back to SMS.",
+                        normalized, baleResult.ErrorCode, baleResult.IsNotBaleUser);
+
+                    dispatched = await _smsService.SendOtpAsync(normalized, code, cancellationToken);
+                    deliveryChannel = "sms";
+                    message = dispatched ? "کد تایید از طریق پیامک ارسال گردید." : "خطا در ارسال پیامک کد تایید.";
+                }
+                else
+                {
+                    dispatched = false;
+                    deliveryChannel = "bale";
+                    message = baleResult.ErrorMessage ?? "خطا در ارسال کد تایید از طریق پیام‌رسان بله.";
+                }
+            }
+            else
+            {
+                dispatched = await _smsService.SendOtpAsync(normalized, code, cancellationToken);
+                deliveryChannel = "sms";
+                message = dispatched ? "کد تایید با موفقیت ارسال گردید." : "خطا در ارسال کد تایید.";
+            }
         }
 
-        _logger.LogInformation("Generated OTP for {Recipient} (Purpose: {Purpose})", normalized, purpose);
+        _logger.LogInformation("Generated OTP for {Recipient} (Purpose: {Purpose}, Channel: {Channel}, Success: {Success})",
+            normalized, purpose, deliveryChannel, dispatched);
 
         return new OtpSendResult(
             Success: dispatched,
-            Message: dispatched ? "کد تایید با موفقیت ارسال گردید." : "خطا در ارسال کد تایید.",
+            Message: message,
             CooldownSeconds: ResendCooldownSeconds,
-            DebugCode: null
+            DebugCode: null,
+            DeliveryChannel: deliveryChannel
         );
     }
 

@@ -84,6 +84,10 @@ public static class DependencyInjection
         // 4. Caching & HTTP Clients
         services.AddMemoryCache();
         services.AddHttpClient("SmsClient");
+        services.AddHttpClient<IBaleOtpService, BaleOtpService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
 
         // 5. Application Services
         services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();

@@ -1,6 +1,14 @@
 namespace Hizu.Application.Common.Interfaces;
 
-public record OtpSendResult(bool Success, string Message, int CooldownSeconds, string? DebugCode = null);
+public record OtpSendResult(
+    bool Success,
+    string Message,
+    int CooldownSeconds,
+    string? DebugCode = null,
+    string? DeliveryChannel = null)
+{
+    public int ResendCooldownSeconds => CooldownSeconds;
+}
 
 public interface IOtpService
 {
