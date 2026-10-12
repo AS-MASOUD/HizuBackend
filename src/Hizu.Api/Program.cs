@@ -99,7 +99,13 @@ using (var scope = app.Services.CreateScope())
         }
 
         logger.LogInformation("Seeding database data...");
-        await DatabaseSeeder.SeedDatabaseAsync(context, userManager, roleManager, logger);
+        await DatabaseSeeder.SeedDatabaseAsync(
+            context,
+            userManager,
+            roleManager,
+            logger,
+            app.Configuration["BootstrapAdmin:Email"],
+            app.Configuration["BootstrapAdmin:Password"]);
         logger.LogInformation("Database initialization complete.");
     }
     catch (Exception ex)
@@ -111,7 +117,7 @@ using (var scope = app.Services.CreateScope())
 // 7. HTTP Pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableSwaggerInProd", true))
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableSwaggerInProd", false))
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>

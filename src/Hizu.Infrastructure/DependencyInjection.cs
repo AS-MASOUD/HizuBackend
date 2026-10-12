@@ -20,8 +20,11 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=HizuDb;Username=admin;Password=admin";
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured. Please set it in appsettings or via environment variables.");
+        }
 
         // 1. EF Core & PostgreSQL
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -33,21 +36,26 @@ public static class DependencyInjection
         // 2. Identity
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
         {
-            options.Password.RequireDigit = false;
-            options.Password.RequireLowercase = false;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
             options.Password.RequireUppercase = false;
             options.Password.RequireNonAlphanumeric = false;
-            options.Password.RequiredLength = 6;
+            options.Password.RequiredLength = 8;
             options.User.RequireUniqueEmail = false;
-            options.Lockout.AllowedForNewUsers = false;
-            options.Lockout.MaxFailedAccessAttempts = 100;
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         })
         .AddEntityFrameworkStores<ApplicationDbContext>()
         .AddDefaultTokenProviders();
 
         // 3. JWT Authentication
         var jwtSettings = configuration.GetSection("Jwt");
-        var secret = jwtSettings["Secret"] ?? "HizuSuperSecretKeyMustBeAtLeast32CharsLongForHS256!";
+        var secret = jwtSettings["Secret"];
+        if (string.IsNullOrWhiteSpace(secret) || secret.Length < 32)
+        {
+            throw new InvalidOperationException("Jwt:Secret must be configured with a cryptographically secure key of at least 32 characters.");
+        }
         var issuer = jwtSettings["Issuer"] ?? "HizuApi";
         var audience = jwtSettings["Audience"] ?? "HizuClient";
 

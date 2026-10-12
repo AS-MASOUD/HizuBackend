@@ -30,8 +30,8 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
         RuleFor(x => x.Password).MinimumLength(6).When(x => !string.IsNullOrWhiteSpace(x.Password)).WithMessage("کلمه عبور باید حداقل ۶ کاراکتر باشد.");
         RuleFor(x => x.FirstName).NotEmpty().WithMessage("نام الزامی است.");
         RuleFor(x => x.LastName).NotEmpty().WithMessage("نام خانوادگی الزامی است.");
-        RuleFor(x => x).Must(x => !string.IsNullOrWhiteSpace(x.PhoneNumber) || !string.IsNullOrWhiteSpace(x.Email))
-            .WithMessage("وارد کردن شماره تماس یا ایمیل الزامی است.");
+        RuleFor(x => x.PhoneNumber).NotEmpty().WithMessage("شماره همراه برای ثبت‌نام الزامی است.");
+        RuleFor(x => x.OtpCode).NotEmpty().WithMessage("کد تایید پیامکی الزامی است.");
     }
 }
 
@@ -59,22 +59,24 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         var recipient = !string.IsNullOrWhiteSpace(request.PhoneNumber) ? request.PhoneNumber.Trim() : request.Email?.Trim();
         if (string.IsNullOrWhiteSpace(recipient))
         {
-            throw new BadRequestException("شماره تماس یا ایمیل الزامی است.");
+            throw new BadRequestException("شماره همراه الزامی است.");
         }
 
-        // Verify OTP if code was supplied
-        if (!string.IsNullOrWhiteSpace(request.OtpCode))
+        if (string.IsNullOrWhiteSpace(request.OtpCode))
         {
-            var isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode, "register", cancellationToken);
-            if (!isValidOtp)
-            {
-                // Also check if sent with "login" purpose
-                isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode, "login", cancellationToken);
-            }
-            if (!isValidOtp)
-            {
-                throw new BadRequestException("کد تایید پیامکی نامعتبر یا منقضی شده است.");
-            }
+            throw new BadRequestException("کد تایید الزامی است.");
+        }
+
+        // Verify OTP strictly
+        var isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode.Trim(), "register", cancellationToken);
+        if (!isValidOtp)
+        {
+            // Also check if sent with "login" purpose
+            isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode.Trim(), "login", cancellationToken);
+        }
+        if (!isValidOtp)
+        {
+            throw new BadRequestException("کد تایید پیامکی نامعتبر یا منقضی شده است.");
         }
 
         // Check if user already exists
@@ -92,15 +94,16 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
                 throw new BadRequestException("کاربری با این شماره همراه قبلاً ثبت‌نام کرده است.");
         }
 
-        var userName = !string.IsNullOrWhiteSpace(request.Email) ? request.Email.Trim() : request.PhoneNumber!.Trim();
+        var userName = !string.IsNullOrWhiteSpace(request.PhoneNumber) ? request.PhoneNumber.Trim() : request.Email!.Trim();
+        var isPhoneVerified = !string.IsNullOrWhiteSpace(request.PhoneNumber) && recipient == request.PhoneNumber.Trim();
 
         var user = new ApplicationUser
         {
             UserName = userName,
             Email = !string.IsNullOrWhiteSpace(request.Email) ? request.Email.Trim() : null,
-            EmailConfirmed = !string.IsNullOrWhiteSpace(request.Email),
+            EmailConfirmed = false,
             PhoneNumber = !string.IsNullOrWhiteSpace(request.PhoneNumber) ? request.PhoneNumber.Trim() : null,
-            PhoneNumberConfirmed = !string.IsNullOrWhiteSpace(request.PhoneNumber),
+            PhoneNumberConfirmed = isPhoneVerified,
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
             Address = request.Address,
@@ -187,11 +190,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         var user = await _userManager.FindByEmailAsync(identifier)
                    ?? await _userManager.FindByNameAsync(identifier);
 
-        if (user == null && identifier.Equals("admin", StringComparison.OrdinalIgnoreCase))
-        {
-            user = await _userManager.FindByEmailAsync("admin@hizu.ir");
-        }
-
         if (user == null && !string.IsNullOrWhiteSpace(identifier))
         {
             user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == identifier, cancellationToken);
@@ -200,41 +198,13 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         if (user == null)
             throw new UnauthorizedException("ایمیل یا کلمه عبور اشتباه است.");
 
-        // If admin account, ensure lockout is cleared
-        if (user.Email == "admin@hizu.ir" || user.UserName == "admin@hizu.ir")
-        {
-            await _userManager.SetLockoutEndDateAsync(user, null);
-            await _userManager.ResetAccessFailedCountAsync(user);
-        }
-        else if (await _userManager.IsLockedOutAsync(user))
+        if (await _userManager.IsLockedOutAsync(user))
         {
             throw new UnauthorizedException("حساب کاربری شما به دلیل تلاش‌های ناموفق مکرر مسدود شده است.");
         }
 
         var password = request.Password?.Trim() ?? string.Empty;
         var isValidPassword = await _userManager.CheckPasswordAsync(user, password);
-
-        // Allow Admin123, Admin123!, admin123 for admin account
-        if (!isValidPassword && (user.Email == "admin@hizu.ir" || user.UserName == "admin@hizu.ir"))
-        {
-            if (password == "Admin123" || password == "Admin123!" || password.Equals("admin123", StringComparison.OrdinalIgnoreCase))
-            {
-                isValidPassword = true;
-                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-                await _userManager.ResetPasswordAsync(user, resetToken, password);
-            }
-        }
-
-        // Allow Demo123, Demo123!, demo123 for demo customer account
-        if (!isValidPassword && (user.Email == "demo@hizu.ir" || user.UserName == "demo@hizu.ir"))
-        {
-            if (password == "Demo123" || password == "Demo123!" || password.Equals("demo123", StringComparison.OrdinalIgnoreCase))
-            {
-                isValidPassword = true;
-                var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-                await _userManager.ResetPasswordAsync(user, resetToken, password);
-            }
-        }
 
         if (!isValidPassword)
         {

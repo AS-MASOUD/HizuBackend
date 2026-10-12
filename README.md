@@ -50,9 +50,10 @@ dotnet run --project src/Hizu.Api
 
 Swagger UI is available at `http://localhost:5000/swagger`.
 
-### 4. Default Seed Accounts
-- **Admin**: `admin@hizu.ir` / `Admin123!`
-- **Demo Customer**: `demo@hizu.ir` / `Demo123!`
+### 4. Administrator Setup
+To seed the initial administrator user on first startup, configure the environment variables:
+- `BootstrapAdmin__Email`: Your administrator email
+- `BootstrapAdmin__Password`: A secure administrator password (minimum 8 characters)
 
 ---
 

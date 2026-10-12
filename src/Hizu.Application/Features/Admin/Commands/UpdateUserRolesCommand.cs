@@ -37,11 +37,14 @@ public class UpdateUserRolesCommandHandler : IRequestHandler<UpdateUserRolesComm
         // Always preserve customer role so user can browse and order
         targetRoles.Add(AppRoles.Customer);
 
-        // Prevent stripping SysManager from the primary root admin
-        if (user.Email == "admin@hizu.ir" || user.UserName == "admin@hizu.ir")
+        // Prevent stripping SysManager from the last active system manager
+        if (currentRoles.Contains(AppRoles.SysManager) && !targetRoles.Contains(AppRoles.SysManager))
         {
-            targetRoles.Add(AppRoles.SysManager);
-            targetRoles.Add(AppRoles.Admin);
+            var sysManagers = await _userManager.GetUsersInRoleAsync(AppRoles.SysManager);
+            if (sysManagers.Count <= 1)
+            {
+                throw new BadRequestException("امکان حذف نقش مدیر ارشد سیستم برای آخرین مدیر فعال سیستم وجود ندارد.");
+            }
         }
 
         foreach (var role in targetRoles)

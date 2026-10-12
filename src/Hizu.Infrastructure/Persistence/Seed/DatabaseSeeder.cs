@@ -14,10 +14,12 @@ public static class DatabaseSeeder
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole<Guid>> roleManager,
-        ILogger logger)
+        ILogger logger,
+        string? bootstrapAdminEmail,
+        string? bootstrapAdminPassword)
     {
         await SeedRolesAsync(roleManager, logger);
-        await SeedUsersAsync(userManager, logger);
+        await SeedUsersAsync(userManager, logger, bootstrapAdminEmail, bootstrapAdminPassword);
         await SeedCategoriesAsync(context, logger);
         await SeedProductsAsync(context, logger);
         await SeedSpecialOrdersAsync(context, logger);
@@ -43,14 +45,32 @@ public static class DatabaseSeeder
         }
     }
 
-    private static async Task SeedUsersAsync(UserManager<ApplicationUser> userManager, ILogger logger)
+    private static async Task SeedUsersAsync(
+        UserManager<ApplicationUser> userManager,
+        ILogger logger,
+        string? bootstrapAdminEmail,
+        string? bootstrapAdminPassword)
     {
-        // 1. Admin / System Manager User
-        var adminEmail = "admin@hizu.ir";
-        var adminUser = await userManager.FindByEmailAsync(adminEmail);
-        if (adminUser == null)
+        if (string.IsNullOrWhiteSpace(bootstrapAdminEmail) &&
+            string.IsNullOrWhiteSpace(bootstrapAdminPassword))
         {
-            logger.LogInformation("Seeding Admin & SysManager user: {Email}", adminEmail);
+            logger.LogInformation(
+                "Bootstrap administrator credentials are not configured; skipping administrator seeding.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(bootstrapAdminEmail) ||
+            string.IsNullOrWhiteSpace(bootstrapAdminPassword))
+        {
+            throw new InvalidOperationException(
+                "Both BootstrapAdmin:Email and BootstrapAdmin:Password must be configured together.");
+        }
+
+        var adminEmail = bootstrapAdminEmail.Trim();
+        var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+        if (adminUser is null)
+        {
             adminUser = new ApplicationUser
             {
                 UserName = adminEmail,
@@ -59,141 +79,44 @@ public static class DatabaseSeeder
                 FirstName = "مدیر سیستم",
                 LastName = "هیزو",
                 PhoneNumber = "09120000000",
-                Address = new Address("خیابان آزادی، ناحیه نوآوری شریف، کارگاه هیزو", "تهران", "تهران", "1458888888", "ایران"),
+                Address = new Address(
+                    "خیابان آزادی، ناحیه نوآوری شریف، کارگاه هیزو",
+                    "تهران",
+                    "تهران",
+                    "1458888888",
+                    "ایران"),
                 CreatedAt = DateTime.UtcNow
             };
 
-            var result = await userManager.CreateAsync(adminUser, "Admin123!");
-            if (result.Succeeded)
+            var createResult = await userManager.CreateAsync(adminUser, bootstrapAdminPassword);
+            if (!createResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(adminUser, AppRoles.SysManager);
-                await userManager.AddToRoleAsync(adminUser, AppRoles.Admin);
-                await userManager.AddToRoleAsync(adminUser, AppRoles.Customer);
-                logger.LogInformation("Admin user created successfully with SysManager & Admin roles.");
+                throw new InvalidOperationException(
+                    "Failed to create bootstrap administrator: " +
+                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
             }
-            else
-            {
-                logger.LogError("Failed to create admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
+
+            logger.LogInformation("Created bootstrap administrator: {Email}", adminEmail);
         }
         else
         {
-            // Verify and synchronize admin password
-            var isPasswordValid = await userManager.CheckPasswordAsync(adminUser, "Admin123!");
-            if (!isPasswordValid)
-            {
-                logger.LogWarning("Admin user password mismatch detected in database. Resetting password to Admin123!...");
-                var resetToken = await userManager.GeneratePasswordResetTokenAsync(adminUser);
-                var resetResult = await userManager.ResetPasswordAsync(adminUser, resetToken, "Admin123!");
-                if (!resetResult.Succeeded)
-                {
-                    await userManager.RemovePasswordAsync(adminUser);
-                    var addResult = await userManager.AddPasswordAsync(adminUser, "Admin123!");
-                    if (addResult.Succeeded)
-                    {
-                        logger.LogInformation("Admin user password reset to Admin123! via AddPasswordAsync.");
-                    }
-                    else
-                    {
-                        logger.LogError("Failed to reset admin user password: {Errors}", string.Join(", ", addResult.Errors.Select(e => e.Description)));
-                    }
-                }
-                else
-                {
-                    logger.LogInformation("Admin user password successfully synchronized to Admin123!.");
-                }
-            }
-
-            // Ensure SysManager and Admin roles
-            if (!await userManager.IsInRoleAsync(adminUser, AppRoles.SysManager))
-            {
-                await userManager.AddToRoleAsync(adminUser, AppRoles.SysManager);
-                logger.LogInformation("Assigned SysManager role to {Email}.", adminEmail);
-            }
-            if (!await userManager.IsInRoleAsync(adminUser, AppRoles.Admin))
-            {
-                await userManager.AddToRoleAsync(adminUser, AppRoles.Admin);
-                logger.LogInformation("Assigned Admin role to {Email}.", adminEmail);
-            }
-            if (!await userManager.IsInRoleAsync(adminUser, AppRoles.Customer))
-            {
-                await userManager.AddToRoleAsync(adminUser, AppRoles.Customer);
-            }
-
-            // Ensure confirmed & unlocked
-            if (!adminUser.EmailConfirmed)
-            {
-                adminUser.EmailConfirmed = true;
-                await userManager.UpdateAsync(adminUser);
-            }
-
-            if (await userManager.IsLockedOutAsync(adminUser))
-            {
-                await userManager.SetLockoutEndDateAsync(adminUser, null);
-                await userManager.ResetAccessFailedCountAsync(adminUser);
-                logger.LogInformation("Unlocked admin account.");
-            }
+            // Never reset an existing administrator's password during application startup.
+            logger.LogInformation("Bootstrap administrator already exists: {Email}", adminEmail);
         }
 
-        // 2. Demo Customer User
-        var demoEmail = "demo@hizu.ir";
-        var demoUser = await userManager.FindByEmailAsync(demoEmail);
-        if (demoUser == null)
+        var requiredRoles = new[] { AppRoles.SysManager, AppRoles.Admin, AppRoles.Customer };
+
+        foreach (var role in requiredRoles)
         {
-            logger.LogInformation("Seeding Demo customer user: {Email}", demoEmail);
-            demoUser = new ApplicationUser
-            {
-                UserName = demoEmail,
-                Email = demoEmail,
-                EmailConfirmed = true,
-                FirstName = "آرش",
-                LastName = "مهندسی",
-                PhoneNumber = "09121111111",
-                Address = new Address("میدان ونک، خیابان ملاصدرا، پلاک ۲۴", "تهران", "تهران", "1993645891", "ایران"),
-                CreatedAt = DateTime.UtcNow
-            };
+            if (await userManager.IsInRoleAsync(adminUser, role))
+                continue;
 
-            var result = await userManager.CreateAsync(demoUser, "Demo123!");
-            if (result.Succeeded)
+            var roleResult = await userManager.AddToRoleAsync(adminUser, role);
+            if (!roleResult.Succeeded)
             {
-                await userManager.AddToRoleAsync(demoUser, AppRoles.Customer);
-                logger.LogInformation("Demo user created successfully with password Demo123!");
-            }
-            else
-            {
-                logger.LogError("Failed to create demo user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
-            }
-        }
-        else
-        {
-            var isPasswordValid = await userManager.CheckPasswordAsync(demoUser, "Demo123!");
-            if (!isPasswordValid)
-            {
-                logger.LogWarning("Demo user password mismatch detected. Resetting password to Demo123!...");
-                var resetToken = await userManager.GeneratePasswordResetTokenAsync(demoUser);
-                var resetResult = await userManager.ResetPasswordAsync(demoUser, resetToken, "Demo123!");
-                if (!resetResult.Succeeded)
-                {
-                    await userManager.RemovePasswordAsync(demoUser);
-                    await userManager.AddPasswordAsync(demoUser, "Demo123!");
-                }
-            }
-
-            if (!await userManager.IsInRoleAsync(demoUser, AppRoles.Customer))
-            {
-                await userManager.AddToRoleAsync(demoUser, AppRoles.Customer);
-            }
-
-            if (!demoUser.EmailConfirmed)
-            {
-                demoUser.EmailConfirmed = true;
-                await userManager.UpdateAsync(demoUser);
-            }
-
-            if (await userManager.IsLockedOutAsync(demoUser))
-            {
-                await userManager.SetLockoutEndDateAsync(demoUser, null);
-                await userManager.ResetAccessFailedCountAsync(demoUser);
+                throw new InvalidOperationException(
+                    $"Failed to assign role '{role}' to bootstrap administrator: " +
+                    string.Join(", ", roleResult.Errors.Select(e => e.Description)));
             }
         }
     }

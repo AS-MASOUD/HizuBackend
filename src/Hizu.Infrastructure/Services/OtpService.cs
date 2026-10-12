@@ -73,13 +73,13 @@ public class OtpService : IOtpService
             dispatched = await _smsService.SendOtpAsync(normalized, code, cancellationToken);
         }
 
-        _logger.LogInformation("Generated OTP for {Recipient} (Purpose: {Purpose}) => [Code: {Code}]", normalized, purpose, code);
+        _logger.LogInformation("Generated OTP for {Recipient} (Purpose: {Purpose})", normalized, purpose);
 
         return new OtpSendResult(
             Success: dispatched,
             Message: dispatched ? "کد تایید با موفقیت ارسال گردید." : "خطا در ارسال کد تایید.",
             CooldownSeconds: ResendCooldownSeconds,
-            DebugCode: code
+            DebugCode: null
         );
     }
 

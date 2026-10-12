@@ -39,6 +39,12 @@ public class SpecialOrdersController : ApiControllerBase
         return Ok(result);
     }
 
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".step", ".stp", ".iges", ".igs", ".dxf", ".dwg", ".stl", ".obj", ".3dm",
+        ".pdf", ".zip", ".rar", ".7z", ".png", ".jpg", ".jpeg", ".webp"
+    };
+
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(50 * 1024 * 1024)] // 50 MB for CAD files / 3D models
@@ -47,13 +53,22 @@ public class SpecialOrdersController : ApiControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("فایلی ارسال نشده است.");
 
+        var rawExtension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrWhiteSpace(rawExtension))
+            return BadRequest("فایل فاقد پسوند معتبر است.");
+
+        var extension = rawExtension.Trim().ToLowerInvariant();
+        if (!AllowedExtensions.Contains(extension))
+        {
+            return BadRequest("پسوند فایل مجاز نمی‌باشد. تنها فایل‌های طراحی مهندسی (STEP, DXF, STL, OBJ)، اسناد PDF، آرشیو فشرده و تصاویر مجاز هستند.");
+        }
+
         var uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot"), "uploads", "special-orders");
         if (!Directory.Exists(uploadsFolder))
         {
             Directory.CreateDirectory(uploadsFolder);
         }
 
-        var extension = Path.GetExtension(file.FileName);
         var uniqueFileName = $"{Guid.NewGuid()}{extension}";
         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
@@ -63,11 +78,12 @@ public class SpecialOrdersController : ApiControllerBase
         }
 
         var relativeUrl = $"/uploads/special-orders/{uniqueFileName}";
+        var sanitizedOriginalName = Path.GetFileName(file.FileName);
 
         return Ok(new SpecialOrderUploadItem
         {
             ImageUrl = relativeUrl,
-            OriginalFileName = file.FileName,
+            OriginalFileName = sanitizedOriginalName,
             FileSizeBytes = file.Length
         });
     }
