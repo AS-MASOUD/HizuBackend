@@ -27,11 +27,11 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
     public RegisterCommandValidator()
     {
         RuleFor(x => x.Email).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email)).WithMessage("فرمت ایمیل نامعتبر است.");
-        RuleFor(x => x.Password).MinimumLength(6).When(x => !string.IsNullOrWhiteSpace(x.Password)).WithMessage("کلمه عبور باید حداقل ۶ کاراکتر باشد.");
+        RuleFor(x => x.Password).NotEmpty().WithMessage("کلمه عبور الزامی است.")
+            .MinimumLength(6).WithMessage("کلمه عبور باید حداقل ۶ کاراکتر باشد.");
         RuleFor(x => x.FirstName).NotEmpty().WithMessage("نام الزامی است.");
         RuleFor(x => x.LastName).NotEmpty().WithMessage("نام خانوادگی الزامی است.");
         RuleFor(x => x.PhoneNumber).NotEmpty().WithMessage("شماره همراه برای ثبت‌نام الزامی است.");
-        RuleFor(x => x.OtpCode).NotEmpty().WithMessage("کد تایید پیامکی الزامی است.");
     }
 }
 
@@ -62,21 +62,19 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             throw new BadRequestException("شماره همراه الزامی است.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.OtpCode))
+        // Verify OTP only if provided (OTP feature is temporarily optional/disabled for static password login)
+        if (!string.IsNullOrWhiteSpace(request.OtpCode))
         {
-            throw new BadRequestException("کد تایید الزامی است.");
-        }
-
-        // Verify OTP strictly
-        var isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode.Trim(), "register", cancellationToken);
-        if (!isValidOtp)
-        {
-            // Also check if sent with "login" purpose
-            isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode.Trim(), "login", cancellationToken);
-        }
-        if (!isValidOtp)
-        {
-            throw new BadRequestException("کد تایید پیامکی نامعتبر یا منقضی شده است.");
+            var isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode.Trim(), "register", cancellationToken);
+            if (!isValidOtp)
+            {
+                // Also check if sent with "login" purpose
+                isValidOtp = await _otpService.VerifyOtpAsync(recipient, request.OtpCode.Trim(), "login", cancellationToken);
+            }
+            if (!isValidOtp)
+            {
+                throw new BadRequestException("کد تایید پیامکی نامعتبر یا منقضی شده است.");
+            }
         }
 
         // Check if user already exists
@@ -193,6 +191,20 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         if (user == null && !string.IsNullOrWhiteSpace(identifier))
         {
             user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == identifier, cancellationToken);
+
+            if (user == null)
+            {
+                var clean = System.Text.RegularExpressions.Regex.Replace(identifier, @"[^\d]", "");
+                var norm0 = clean.StartsWith("98") && clean.Length == 12 ? "0" + clean[2..] :
+                            clean.StartsWith("0098") && clean.Length == 14 ? "0" + clean[4..] :
+                            clean.Length == 10 && clean.StartsWith("9") ? "0" + clean : clean;
+
+                if (!string.IsNullOrWhiteSpace(norm0))
+                {
+                    user = await _userManager.Users.FirstOrDefaultAsync(u =>
+                        u.PhoneNumber == norm0 || u.UserName == norm0, cancellationToken);
+                }
+            }
         }
 
         if (user == null)
