@@ -22,12 +22,16 @@ RUN dotnet publish Hizu.Api.csproj -c Release -o /app/publish /p:UseAppHost=fals
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
+COPY --from=build /app/publish .
+
+RUN mkdir -p /app/wwwroot/uploads \
+    && chown -R app:app /app/wwwroot
+
 # Non-root user for security
 USER app
-
-COPY --from=build /app/publish .
 
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 
 ENTRYPOINT ["dotnet", "Hizu.Api.dll"]
+
