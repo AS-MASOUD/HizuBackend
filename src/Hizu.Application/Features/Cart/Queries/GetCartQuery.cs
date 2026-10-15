@@ -68,7 +68,7 @@ public class GetCartQueryHandler : IRequestHandler<GetCartQuery, CartDto>
                     ProductSlug = item.Course.Slug,
                     Sku = $"CRS-{item.Course.Slug.ToUpper()}",
                     ImageUrl = item.Course.CoverImageUrl,
-                    UnitPrice = item.Course.Price,
+                    UnitPrice = item.Course.Price ?? 0m,
                     Quantity = 1,
                     AvailableStock = 9999
                 });

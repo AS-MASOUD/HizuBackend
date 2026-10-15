@@ -57,6 +57,9 @@ public class AddToCartCommandHandler : IRequestHandler<AddToCartCommand, CartDto
             if (course == null || !course.IsPublished)
                 throw new NotFoundException("Course", request.CourseId.Value);
 
+            if (course.IsReservationOnly || !course.Price.HasValue || course.Price.Value <= 0)
+                throw new BadRequestException("این دوره در مرحله پیش‌ثبت‌نام و رزرو است و نیازی به سبد خرید ندارد. لطفاً از دکمه رزرو مستقیم دوره استفاده فرمایید.");
+
             var existingItem = cart.Items.FirstOrDefault(i => i.CourseId == request.CourseId.Value);
             if (existingItem == null)
             {
@@ -68,7 +71,7 @@ public class AddToCartCommandHandler : IRequestHandler<AddToCartCommand, CartDto
                     CourseId = course.Id,
                     ProductId = null,
                     Quantity = 1,
-                    UnitPrice = course.Price,
+                    UnitPrice = course.Price.Value,
                     CreatedAt = DateTime.UtcNow
                 };
                 cart.Items.Add(cartItem);

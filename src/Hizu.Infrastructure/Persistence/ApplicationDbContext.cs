@@ -37,6 +37,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<CompanyGoal> CompanyGoals => Set<CompanyGoal>();
     public DbSet<CompanyMilestone> CompanyMilestones => Set<CompanyMilestone>();
+    public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

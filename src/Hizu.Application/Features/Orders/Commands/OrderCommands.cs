@@ -74,7 +74,8 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
                     if (course == null || !course.IsPublished)
                         throw new BadRequestException($"دوره آموزشی '{item.Course?.Title ?? "نامشخص"}' در حال حاضر فعال یا منتشر شده نیست.");
 
-                    var itemTotal = course.Price * 1;
+                    var itemPrice = course.Price ?? 0;
+                    var itemTotal = itemPrice * 1;
                     subtotal += itemTotal;
 
                     course.StudentsCount += 1;
@@ -87,7 +88,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
                         ProductName = course.Title,
                         Sku = $"CRS-{course.Slug.ToUpper()}",
                         Quantity = 1,
-                        UnitPrice = course.Price,
+                        UnitPrice = itemPrice,
                         TotalPrice = itemTotal,
                         CreatedAt = DateTime.UtcNow
                     });

@@ -32,6 +32,8 @@ public class GetAdminDashboardStatsQueryHandler : IRequestHandler<GetAdminDashbo
         var totalRevenue = await _context.Orders
             .Where(o => o.Status != OrderStatus.Cancelled)
             .SumAsync(o => (decimal?)o.Total, cancellationToken) ?? 0;
+        var unreadContactMessages = await _context.ContactMessages
+            .CountAsync(m => !m.IsRead, cancellationToken);
 
         return new AdminDashboardStatsDto
         {
@@ -42,7 +44,8 @@ public class GetAdminDashboardStatsQueryHandler : IRequestHandler<GetAdminDashbo
             TotalSpecialOrders = totalSpecialOrders,
             PendingSpecialOrders = pendingSpecialOrders,
             TotalUsers = totalUsers,
-            TotalRevenue = totalRevenue
+            TotalRevenue = totalRevenue,
+            UnreadContactMessagesCount = unreadContactMessages
         };
     }
 }

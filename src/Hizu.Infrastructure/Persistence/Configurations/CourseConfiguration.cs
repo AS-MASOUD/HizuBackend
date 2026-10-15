@@ -28,7 +28,11 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
             .IsRequired();
 
         builder.Property(c => c.Price)
-            .HasPrecision(18, 2);
+            .HasPrecision(18, 2)
+            .IsRequired(false);
+
+        builder.Property(c => c.IsReservationOnly)
+            .HasDefaultValue(false);
 
         builder.Property(c => c.CompareAtPrice)
             .HasPrecision(18, 2);

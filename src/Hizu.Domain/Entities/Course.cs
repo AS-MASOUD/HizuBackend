@@ -10,9 +10,10 @@ public class Course : BaseEntity
     public string? Subtitle { get; set; }
     public string Description { get; set; } = string.Empty;
 
-    // Pricing
-    public decimal Price { get; set; }
+    // Pricing & Reservation
+    public decimal? Price { get; set; }
     public decimal? CompareAtPrice { get; set; }
+    public bool IsReservationOnly { get; set; } = false;
 
     // Media & File Server Integration
     public string? CoverImageUrl { get; set; }

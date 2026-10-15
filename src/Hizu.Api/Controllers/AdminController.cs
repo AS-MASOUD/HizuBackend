@@ -11,6 +11,12 @@ using Hizu.Application.Features.SpecialOrders.Queries;
 using Hizu.Application.Features.Products.Commands;
 using Hizu.Application.Features.Products.DTOs;
 using Hizu.Application.Features.Products.Queries;
+using Hizu.Application.Features.Courses.Commands;
+using Hizu.Application.Features.Courses.DTOs;
+using Hizu.Application.Features.Courses.Queries;
+using Hizu.Application.Features.Contact.Commands;
+using Hizu.Application.Features.Contact.DTOs;
+using Hizu.Application.Features.Contact.Queries;
 using Hizu.Domain.Constants;
 using Hizu.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -108,6 +114,71 @@ public class AdminController : ApiControllerBase
         await Mediator.Send(new DeleteProductCommentCommand(id));
         return NoContent();
     }
+
+    // Courses Management
+    [HttpGet("courses")]
+    public async Task<ActionResult<List<CourseDto>>> GetCourses([FromQuery] string? search)
+    {
+        var result = await Mediator.Send(new GetAllAdminCoursesQuery(search));
+        return Ok(result);
+    }
+
+    [HttpPost("courses")]
+    public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] UpsertCourseDto request)
+    {
+        var result = await Mediator.Send(new CreateCourseCommand(request));
+        return CreatedAtAction(nameof(GetCourses), new { id = result.Id }, result);
+    }
+
+    [HttpPut("courses/{id:guid}")]
+    public async Task<ActionResult<CourseDto>> UpdateCourse(Guid id, [FromBody] UpsertCourseDto request)
+    {
+        var result = await Mediator.Send(new UpdateCourseCommand(id, request));
+        return Ok(result);
+    }
+
+    [HttpDelete("courses/{id:guid}")]
+    public async Task<ActionResult> DeleteCourse(Guid id)
+    {
+        await Mediator.Send(new DeleteCourseCommand(id));
+        return NoContent();
+    }
+
+    [HttpPatch("courses/{id:guid}/publish")]
+    public async Task<ActionResult<bool>> ToggleCoursePublish(Guid id)
+    {
+        var result = await Mediator.Send(new ToggleCoursePublishCommand(id));
+        return Ok(result);
+    }
+
+    // Contact Messages Management
+    [HttpGet("contact-messages")]
+    public async Task<ActionResult<PagedResult<ContactMessageDto>>> GetContactMessages([FromQuery] GetContactMessagesQuery query)
+    {
+        var result = await Mediator.Send(query);
+        return Ok(result);
+    }
+
+    [HttpPatch("contact-messages/{id:guid}/read")]
+    public async Task<ActionResult> ToggleContactMessageRead(Guid id, [FromBody] ToggleMessageReadRequest request)
+    {
+        await Mediator.Send(new MarkContactMessageReadCommand(id, request.IsRead));
+        return NoContent();
+    }
+
+    [HttpPost("contact-messages/{id:guid}/reply")]
+    public async Task<ActionResult> ReplyContactMessage(Guid id, [FromBody] ReplyContactMessageRequest request)
+    {
+        await Mediator.Send(new ReplyContactMessageCommand(id, request.AdminNotes));
+        return NoContent();
+    }
+
+    [HttpDelete("contact-messages/{id:guid}")]
+    public async Task<ActionResult> DeleteContactMessage(Guid id)
+    {
+        await Mediator.Send(new DeleteContactMessageCommand(id));
+        return NoContent();
+    }
 }
 
 public record UpdateOrderStatusRequest(OrderStatus Status);
@@ -116,4 +187,6 @@ public record UpdateSpecialOrderStatusRequest(SpecialOrderStatus Status);
 public record UpdateRolesRequest(List<string> Roles);
 public record ToggleApprovalRequest(bool IsApproved);
 public record ReplyCommentRequest(string ReplyText);
+public record ToggleMessageReadRequest(bool IsRead);
+public record ReplyContactMessageRequest(string AdminNotes);
 

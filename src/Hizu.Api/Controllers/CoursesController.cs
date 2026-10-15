@@ -32,4 +32,27 @@ public class CoursesController : ApiControllerBase
         var result = await Mediator.Send(new GetCourseBySlugQuery(slug));
         return Ok(result);
     }
+
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [HttpPost("{id:guid}/reserve")]
+    public async Task<ActionResult> ReserveCourse(Guid id)
+    {
+        if (!CurrentUserId.HasValue)
+            return Unauthorized();
+
+        await Mediator.Send(new Hizu.Application.Features.Courses.Commands.ReserveCourseCommand(id, CurrentUserId.Value));
+        return Ok(new { success = true, message = "رزرو و پیش‌ثبت‌نام با موفقیت انجام شد." });
+    }
+
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [HttpGet("my-courses")]
+    public async Task<ActionResult<List<CourseListDto>>> GetMyCourses()
+    {
+        if (!CurrentUserId.HasValue)
+            return Unauthorized();
+
+        var result = await Mediator.Send(new GetMyEnrolledCoursesQuery(CurrentUserId.Value));
+        return Ok(result);
+    }
 }
+

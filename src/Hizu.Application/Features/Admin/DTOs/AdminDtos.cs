@@ -10,6 +10,7 @@ public class AdminDashboardStatsDto
     public int PendingSpecialOrders { get; set; }
     public int TotalUsers { get; set; }
     public decimal TotalRevenue { get; set; }
+    public int UnreadContactMessagesCount { get; set; }
 }
 
 public class AdminUserDto

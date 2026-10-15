@@ -29,6 +29,7 @@ public interface IApplicationDbContext
     DbSet<TeamMember> TeamMembers { get; }
     DbSet<CompanyGoal> CompanyGoals { get; }
     DbSet<CompanyMilestone> CompanyMilestones { get; }
+    DbSet<ContactMessage> ContactMessages { get; }
     DbSet<ApplicationUser> Users { get; }
 
     DatabaseFacade Database { get; }
