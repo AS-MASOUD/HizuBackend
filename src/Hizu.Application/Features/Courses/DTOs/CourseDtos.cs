@@ -94,6 +94,7 @@ public class UpsertCourseDto
     public bool IsPublished { get; set; } = true;
     public bool IsFeatured { get; set; } = false;
     public int DisplayOrder { get; set; } = 0;
+    public List<CourseSectionDto> Sections { get; set; } = [];
 }
 
 

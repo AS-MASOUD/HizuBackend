@@ -18,7 +18,7 @@ public record CreateProductCommand : IRequest<ProductDto>
     public string? Sku { get; init; }
     public decimal Price { get; init; }
     public decimal? CompareAtPrice { get; init; }
-    public int StockQuantity { get; init; }
+    public int? StockQuantity { get; init; }
     public string? ImageUrl { get; init; }
     public bool IsActive { get; init; } = true;
     public bool IsFeatured { get; init; } = false;
@@ -41,7 +41,9 @@ public class CreateProductCommandValidator : AbstractValidator<CreateProductComm
         RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Sku).MaximumLength(50).When(x => !string.IsNullOrEmpty(x.Sku));
         RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.StockQuantity).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.StockQuantity)
+            .GreaterThanOrEqualTo(0)
+            .When(x => x.StockQuantity.HasValue);
         RuleFor(x => x.CategoryId).GreaterThan(0);
     }
 }
@@ -164,7 +166,7 @@ public record UpdateProductCommand : IRequest<ProductDto>
     public string? Sku { get; init; }
     public decimal Price { get; init; }
     public decimal? CompareAtPrice { get; init; }
-    public int StockQuantity { get; init; }
+    public int? StockQuantity { get; init; }
     public string? ImageUrl { get; init; }
     public bool IsActive { get; init; }
     public bool IsFeatured { get; init; }
@@ -296,9 +298,9 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand,
     }
 }
 
-public record UpdateProductStockCommand(Guid Id, int QuantityChange) : IRequest<int>;
+public record UpdateProductStockCommand(Guid Id, int QuantityChange) : IRequest<int?>;
 
-public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductStockCommand, int>
+public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductStockCommand, int?>
 {
     private readonly IApplicationDbContext _context;
 
@@ -307,15 +309,18 @@ public class UpdateProductStockCommandHandler : IRequestHandler<UpdateProductSto
         _context = context;
     }
 
-    public async Task<int> Handle(UpdateProductStockCommand request, CancellationToken cancellationToken)
+    public async Task<int?> Handle(UpdateProductStockCommand request, CancellationToken cancellationToken)
     {
         var product = await _context.Products.FindAsync([request.Id], cancellationToken);
         if (product == null)
             throw new NotFoundException("Product", request.Id);
 
-        var newStock = product.StockQuantity + request.QuantityChange;
+        if (!product.StockQuantity.HasValue)
+            return null;
+
+        var newStock = product.StockQuantity.Value + request.QuantityChange;
         if (newStock < 0)
-            throw new BadRequestException($"موجودی محصول «{product.Name}» برای این عملیات کافی نیست. موجودی انبار: {product.StockQuantity}");
+            throw new BadRequestException($"موجودی محصول «{product.Name}» برای این عملیات کافی نیست. موجودی انبار: {product.StockQuantity.Value}");
 
         product.StockQuantity = newStock;
         product.UpdatedAt = DateTime.UtcNow;

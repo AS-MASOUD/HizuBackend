@@ -34,6 +34,9 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.CompareAtPrice)
             .HasPrecision(18, 2);
 
+        builder.Property(p => p.StockQuantity)
+            .IsRequired(false);
+
         builder.Property(p => p.Description)
             .HasMaxLength(4000);
 

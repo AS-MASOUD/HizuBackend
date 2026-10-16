@@ -40,7 +40,7 @@ public class CartTests : IDisposable
         _connection.Dispose();
     }
 
-    private async Task<(Category Category, Product Product, ApplicationUser User)> SeedBasicEntitiesAsync(int stockQuantity = 10, bool isActive = true)
+    private async Task<(Category Category, Product Product, ApplicationUser User)> SeedBasicEntitiesAsync(int? stockQuantity = 10, bool isActive = true)
     {
         var category = new Category
         {
@@ -187,6 +187,28 @@ public class CartTests : IDisposable
         var act = async () => await handler.Handle(new AddToCartCommand(user.Id, product.Id, 5), CancellationToken.None);
         await act.Should().ThrowAsync<BadRequestException>()
             .WithMessage("*موجودی*");
+    }
+
+    [Fact]
+    public async Task AddToCart_ShouldSucceed_WhenStockQuantityIsNull()
+    {
+        // Arrange
+        var (_, product, user) = await SeedBasicEntitiesAsync(stockQuantity: null);
+
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetCartQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CartDto { UserId = user.Id });
+
+        var handler = new AddToCartCommandHandler(_context, _mediatorMock.Object);
+
+        // Act
+        var result = await handler.Handle(new AddToCartCommand(user.Id, product.Id, 10), CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        var savedCart = await _context.Carts.Include(c => c.Items).FirstOrDefaultAsync(c => c.UserId == user.Id);
+        savedCart.Should().NotBeNull();
+        savedCart!.Items.First().Quantity.Should().Be(10);
     }
 
     [Fact]

@@ -121,6 +121,8 @@ public class GetAllOrdersQueryHandler : IRequestHandler<GetAllOrdersQuery, Paged
             .Include(o => o.User)
             .Include(o => o.Items)
                 .ThenInclude(i => i.Product)
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Course)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -129,7 +131,9 @@ public class GetAllOrdersQueryHandler : IRequestHandler<GetAllOrdersQuery, Paged
             query = query.Where(o => o.OrderNumber.ToLower().Contains(search) ||
                                      (o.User != null && (o.User.Email!.ToLower().Contains(search) ||
                                                          o.User.FirstName.ToLower().Contains(search) ||
-                                                         o.User.LastName.ToLower().Contains(search))));
+                                                         o.User.LastName.ToLower().Contains(search) ||
+                                                         (o.User.PhoneNumber != null && o.User.PhoneNumber.Contains(search)))) ||
+                                     o.Items.Any(i => i.ProductName.ToLower().Contains(search)));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

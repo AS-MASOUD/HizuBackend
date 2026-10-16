@@ -113,8 +113,8 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Ord
                     if (product == null || !product.IsActive)
                         throw new BadRequestException($"محصول '{item.Product?.Name ?? "نامشخص"}' در حال حاضر موجود یا فعال نیست.");
 
-                    if (product.StockQuantity < item.Quantity)
-                        throw new BadRequestException($"موجودی محصول '{product.Name}' برای تعداد درخواستی کافی نیست. موجودی انبار: {product.StockQuantity}");
+                    if (product.StockQuantity.HasValue && product.StockQuantity.Value < item.Quantity)
+                        throw new BadRequestException($"موجودی محصول '{product.Name}' برای تعداد درخواستی کافی نیست. موجودی انبار: {product.StockQuantity.Value}");
 
                     var itemTotal = product.Price * item.Quantity;
                     subtotal += itemTotal;
@@ -295,9 +295,9 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
                 if (item.ProductId.HasValue)
                 {
                     var product = await _context.Products.FindAsync([item.ProductId.Value], cancellationToken);
-                    if (product != null)
+                    if (product != null && product.StockQuantity.HasValue)
                     {
-                        product.StockQuantity = Math.Max(0, product.StockQuantity - item.Quantity);
+                        product.StockQuantity = Math.Max(0, product.StockQuantity.Value - item.Quantity);
                         product.UpdatedAt = DateTime.UtcNow;
                     }
                 }
@@ -311,9 +311,9 @@ public class UpdateOrderStatusCommandHandler : IRequestHandler<UpdateOrderStatus
                 if (item.ProductId.HasValue)
                 {
                     var product = await _context.Products.FindAsync([item.ProductId.Value], cancellationToken);
-                    if (product != null)
+                    if (product != null && product.StockQuantity.HasValue)
                     {
-                        product.StockQuantity += item.Quantity;
+                        product.StockQuantity = product.StockQuantity.Value + item.Quantity;
                         product.UpdatedAt = DateTime.UtcNow;
                     }
                 }

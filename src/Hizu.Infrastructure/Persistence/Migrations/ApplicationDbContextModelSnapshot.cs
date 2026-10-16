@@ -1118,7 +1118,7 @@ namespace Hizu.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("StockQuantity")
+                    b.Property<int?>("StockQuantity")
                         .HasColumnType("integer");
 
                     b.Property<string>("Technique")

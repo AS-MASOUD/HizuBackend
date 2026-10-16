@@ -74,7 +74,7 @@ public class ProductsController : ApiControllerBase
 
     [Authorize(Roles = AppRoles.AdminOrSysManager)]
     [HttpPatch("{id:guid}/stock")]
-    public async Task<ActionResult<int>> UpdateStock(Guid id, [FromBody] UpdateStockRequest request)
+    public async Task<ActionResult<int?>> UpdateStock(Guid id, [FromBody] UpdateStockRequest request)
     {
         var result = await Mediator.Send(new UpdateProductStockCommand(id, request.QuantityChange));
         return Ok(result);

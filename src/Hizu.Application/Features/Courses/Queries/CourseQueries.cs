@@ -281,6 +281,7 @@ public class GetAllAdminCoursesQueryHandler : IRequestHandler<GetAllAdminCourses
             .AsNoTracking()
             .Include(c => c.Enrollments)
             .Include(c => c.Sections)
+                .ThenInclude(s => s.Episodes)
             .Include(c => c.Episodes)
             .AsQueryable();
 
@@ -347,7 +348,30 @@ public class GetAllAdminCoursesQueryHandler : IRequestHandler<GetAllAdminCourses
             TargetAudience = course.TargetAudience,
             WhatYouWillLearnList = ParseLines(course.WhatYouWillLearn),
             RequirementsList = ParseLines(course.Requirements),
-            TargetAudienceList = ParseLines(course.TargetAudience)
+            TargetAudienceList = ParseLines(course.TargetAudience),
+            Sections = course.Sections.OrderBy(s => s.DisplayOrder).Select(s => new CourseSectionDto
+            {
+                Id = s.Id,
+                Title = s.Title,
+                Description = s.Description,
+                DisplayOrder = s.DisplayOrder,
+                Episodes = s.Episodes.OrderBy(e => e.DisplayOrder).Select(e => new CourseEpisodeDto
+                {
+                    Id = e.Id,
+                    SectionId = e.SectionId,
+                    Title = e.Title,
+                    Description = e.Description,
+                    DurationMinutes = e.DurationMinutes,
+                    DurationText = e.DurationText,
+                    VideoUrl = e.VideoUrl,
+                    FileServerUrl = e.FileServerUrl,
+                    AttachmentUrl = e.AttachmentUrl,
+                    AttachmentName = e.AttachmentName,
+                    AttachmentSizeBytes = e.AttachmentSizeBytes,
+                    IsFreePreview = e.IsFreePreview,
+                    DisplayOrder = e.DisplayOrder
+                }).ToList()
+            }).ToList()
         }).ToList();
     }
 }

@@ -25,5 +25,5 @@ public class CartItemDto
     public decimal UnitPrice { get; set; }
     public int Quantity { get; set; }
     public decimal TotalPrice => UnitPrice * Quantity;
-    public int AvailableStock { get; set; } = 9999;
+    public int? AvailableStock { get; set; } = 9999;
 }

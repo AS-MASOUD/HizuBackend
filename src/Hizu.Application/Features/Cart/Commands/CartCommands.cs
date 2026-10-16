@@ -87,8 +87,8 @@ public class AddToCartCommandHandler : IRequestHandler<AddToCartCommand, CartDto
             var existingItem = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId.Value);
             var totalRequested = (existingItem?.Quantity ?? 0) + request.Quantity;
 
-            if (totalRequested > product.StockQuantity)
-                throw new BadRequestException($"امکان افزودن {request.Quantity} عدد وجود ندارد. موجودی انبار: {product.StockQuantity} عدد");
+            if (product.StockQuantity.HasValue && totalRequested > product.StockQuantity.Value)
+                throw new BadRequestException($"امکان افزودن {request.Quantity} عدد وجود ندارد. موجودی انبار: {product.StockQuantity.Value} عدد");
 
             if (existingItem != null)
             {
@@ -158,8 +158,8 @@ public class UpdateCartItemCommandHandler : IRequestHandler<UpdateCartItemComman
         }
         else
         {
-            if (item.Product != null && request.Quantity > item.Product.StockQuantity)
-                throw new BadRequestException($"تعداد درخواستی ({request.Quantity}) بیشتر از موجودی انبار ({item.Product.StockQuantity}) است.");
+            if (item.Product != null && item.Product.StockQuantity.HasValue && request.Quantity > item.Product.StockQuantity.Value)
+                throw new BadRequestException($"تعداد درخواستی ({request.Quantity}) بیشتر از موجودی انبار ({item.Product.StockQuantity.Value}) است.");
 
             item.Quantity = request.Quantity;
             item.UpdatedAt = DateTime.UtcNow;

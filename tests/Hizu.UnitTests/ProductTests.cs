@@ -172,5 +172,40 @@ public class ProductTests : IDisposable
         replied.AdminReply.Should().Be("با تشکر از اعتماد شما به کارگاه هیزو.");
         replied.AdminRepliedAt.Should().NotBeNull();
     }
+
+    [Fact]
+    public async Task CreateProduct_WithNullStockQuantity_ShouldPersistNullStock()
+    {
+        // Arrange
+        var category = new Category
+        {
+            Name = "Laser Cut",
+            Slug = "laser-cut",
+            Code = "LC",
+            Description = "Laser Description"
+        };
+        _context.Categories.Add(category);
+        await _context.SaveChangesAsync();
+
+        var createHandler = new CreateProductCommandHandler(_context);
+        var createCommand = new CreateProductCommand
+        {
+            Name = "Custom Acrylic Plate",
+            Price = 450000,
+            StockQuantity = null, // Admin didn't enter stock
+            CategoryId = category.Id
+        };
+
+        // Act
+        var created = await createHandler.Handle(createCommand, CancellationToken.None);
+
+        // Assert
+        created.Should().NotBeNull();
+        created.StockQuantity.Should().BeNull();
+
+        var inDb = await _context.Products.FindAsync(created.Id);
+        inDb.Should().NotBeNull();
+        inDb!.StockQuantity.Should().BeNull();
+    }
 }
 
